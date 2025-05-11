@@ -1,4 +1,4 @@
-import { Options } from './client';
+import { Options } from '..';
 type TaskId = number;
 type TaskData = {
     blob: Blob;
@@ -10,6 +10,6 @@ export type TaskMessage = TaskData & {
 export declare class TaskQueue {
     #private;
     constructor();
-    addTask(taskData: TaskData): Promise<Blob>;
+    addTask(taskData: TaskData): Promise<ImageBitmap>;
 }
 export {};

@@ -804,7 +804,7 @@ function processStages(stages, from, to, opts) {
   });
 }
 
-// src/resize.ts
+// src/index.ts
 async function resize2(blob, maxDimension) {
   const imageBitmap = await createImageBitmap(blob);
   const originalWidth = imageBitmap.width;
@@ -1641,7 +1641,7 @@ function processStages(stages, from, to, opts) {
   });
 }
 
-// src/resize.ts
+// src/index.ts
 async function resize2(blob, maxDimension) {
   const imageBitmap = await createImageBitmap(blob);
   const originalWidth = imageBitmap.width;
@@ -1673,7 +1673,6 @@ async function resize2(blob, maxDimension) {
 // src/worker/worker.ts
 self.onmessage = async (event) => {
   const { taskId, blob, options } = event.data;
-  console.log(event.data);
   try {
     const resizedImageBitmap = await resize2(blob, options.maxDimension);
     self.postMessage({ taskId, output: resizedImageBitmap }, [resizedImageBitmap]);
@@ -1760,8 +1759,9 @@ class TaskQueue {
   #taskQueue;
   #pool;
   constructor() {
+    const hardwareConcurrency = typeof navigator === "undefined" ? 1 : navigator.hardwareConcurrency;
     this.#maxIdle = 2000;
-    this.#maxPoolSize = Math.min(navigator.hardwareConcurrency || 1, 4);
+    this.#maxPoolSize = Math.min(hardwareConcurrency, 4);
     this.#taskQueue = [];
     this.#pool = new WorkerPool;
   }

@@ -1,6 +1,11 @@
 import { createStages } from './worker/pica/client/createStages'
 import { processStages } from './worker/pica/client/processStages'
 
+export type Options = {
+  maxDimension: number
+  useMainThread?: boolean
+}
+
 export async function resize(blob: Blob, maxDimension: number) {
   const imageBitmap = await createImageBitmap(blob)
   const originalWidth = imageBitmap.width
@@ -38,5 +43,5 @@ export async function resize(blob: Blob, maxDimension: number) {
   const result = await processStages(stages, imageBitmap, offscreenCanvas, opts)
   const resizedImageBitmap = result.transferToImageBitmap()
 
-  return resizedImageBitmap
+  return resizedImageBitmap as ImageBitmap
 }

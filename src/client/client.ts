@@ -1,10 +1,5 @@
-import { resize } from '../resize'
+import { Options, resize } from '..'
 import { TaskQueue } from './task-queue'
-
-export type Options = {
-  maxDimension: number
-  useMainThread?: boolean
-}
 
 export class PicSquish {
   #taskQueue: TaskQueue

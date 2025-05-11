@@ -1,10 +1,8 @@
 import { TaskMessage } from '../client/task-queue'
-import { resize } from '../resize'
+import { resize } from '..'
 
 self.onmessage = async (event: MessageEvent<TaskMessage>) => {
   const { taskId, blob, options } = event.data
-
-  console.log(event.data)
 
   try {
     const resizedImageBitmap = await resize(blob, options.maxDimension)

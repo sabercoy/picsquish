@@ -1,4 +1,4 @@
-import { Options } from './client'
+import { Options } from '..'
 
 const workerCode = '<WORKER_CODE>'
 const workerBlob = new Blob([workerCode], { type: 'application/javascript' })
@@ -10,21 +10,21 @@ type TaskData = {
   options: Options
 }
 
+type TaskResult = {
+  taskId: TaskId
+  output: ImageBitmap
+  error: Error
+}
+
 type PendingTask = {
   id: TaskId
   data: TaskData
-  resolve: (resizedBlob: Blob) => void
-  reject: (error: Error) => void
+  resolve: (output: TaskResult['output']) => void
+  reject: (error: TaskResult['error']) => void
 }
 
 export type TaskMessage = TaskData & {
   taskId: TaskId
-}
-
-type TaskResult = {
-  taskId: TaskId
-  output: Blob
-  error: Error
 }
 
 const createId = (() => {
@@ -115,8 +115,10 @@ export class TaskQueue {
   #pool: WorkerPool
 
   constructor() {
+    const hardwareConcurrency = typeof navigator === 'undefined' ? 1 : navigator.hardwareConcurrency
+
     this.#maxIdle = 2000
-    this.#maxPoolSize = Math.min(navigator.hardwareConcurrency || 1, 4)
+    this.#maxPoolSize = Math.min(hardwareConcurrency, 4)
     this.#taskQueue = []
     this.#pool = new WorkerPool()
   }

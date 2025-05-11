@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Grid</title>
+    <link rel="stylesheet" href="./index.css">
+    <script type="module" src="./index.js" defer></script>
+    <script src="./pica.js"></script>
+    <script src="./pica-worker.js"></script>
+    <script type="module" src="./picsquish.js" defer></script>
+  </head>
+  <body>
+    <div>
+      <label for="image-upload">resize with main thread:</label>
+      <input type="file" id="image-upload-main-thread" multiple accept="image/*">
+    </div>
+    <div>
+      <label for="image-upload">resize with pica:</label>
+      <input type="file" id="image-upload-pica" multiple accept="image/*">
+    </div>
+    <div>
+      <label for="image-upload">resize with picsquish:</label>
+      <input type="file" id="image-upload-picsquish" multiple accept="image/*">
+    </div>
+    <div id="count">0</div>
+    <div class="image-grid" id="image-grid"></div>
+  </body>
+</html>

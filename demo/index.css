@@ -1,0 +1,25 @@
+body {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+
+input[type="file"] {
+  padding: 10px;
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.image-grid img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+#count {
+  font-size: 50px;
+}

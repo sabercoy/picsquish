@@ -1,0 +1,35 @@
+{
+  "name": "picsquish",
+  "version": "0.1.0",
+  "peerDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/picsquish.js",
+      "types": "./dist/client/client.d.ts"
+    },
+    "./min": {
+      "import": "./dist/picsquish.min.js",
+      "types": "./dist/client/client.d.ts"
+    }
+  },
+  "keywords": [
+    "resize",
+    "scale",
+    "image",
+    "lanczos",
+    "canvas"
+  ],
+  "scripts": {
+    "build": "bun ./scripts/build.ts",
+    "demo": "cd demo && python -m http.server 8000"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "^1.1.14"
+  },
+  "dependencies": {
+    "glur": "^1.1.2"
+  }
+}

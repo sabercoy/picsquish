@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "lib": ["WebWorker", "DOM", "ESNext"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "types": [], // Only want types for the browser
+    "moduleDetection": "force",
+    "allowJs": true,
+
+    // Bundler mode
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+
+    // Enable declaration file generation
+    "declaration": true,
+    "emitDeclarationOnly": true, // Only generate declarations, no JavaScript
+    "outDir": "./dist", // Generate a single .d.ts file in dist
+
+    // Best practices
+    "strict": true,
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+
+    // Some stricter flags (disabled by default)
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noPropertyAccessFromIndexSignature": false
+  },
+  "files": [
+    "./src/client/client.ts",
+    "./src/worker/worker.ts"
+  ]
+}

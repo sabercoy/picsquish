@@ -186,14 +186,6 @@ function createStages(fromWidth, fromHeight, toWidth, toHeight, srcTileSize, des
   return result;
 }
 
-// src/worker/pica/client/utils.js
-function isCanvas(element) {
-  return element instanceof OffscreenCanvas;
-}
-function isImageBitmap(element) {
-  return element instanceof ImageBitmap;
-}
-
 // src/worker/pica/client/extractTileData.js
 function extractTileData(tile, from, opts, stageEnv, extractTo) {
   let tmpCanvas = new OffscreenCanvas(tile.width, tile.height);
@@ -209,16 +201,14 @@ function extractTileData(tile, from, opts, stageEnv, extractTo) {
 var PIXEL_EPSILON = 0.00001;
 function pixelFloor(x) {
   var nearest = Math.round(x);
-  if (Math.abs(x - nearest) < PIXEL_EPSILON) {
+  if (Math.abs(x - nearest) < PIXEL_EPSILON)
     return nearest;
-  }
   return Math.floor(x);
 }
 function pixelCeil(x) {
   var nearest = Math.round(x);
-  if (Math.abs(x - nearest) < PIXEL_EPSILON) {
+  if (Math.abs(x - nearest) < PIXEL_EPSILON)
     return nearest;
-  }
   return Math.ceil(x);
 }
 function createRegions(options) {
@@ -652,9 +642,8 @@ function unsharp(img, width, height, amount, radius, threshold) {
 // src/worker/pica/worker/resizeAndUnsharp.js
 function resizeAndUnsharp(options, cache) {
   let result = resize(options, cache);
-  if (options.unsharpAmount) {
+  if (options.unsharpAmount)
     unsharp(result, options.toWidth, options.toHeight, options.unsharpAmount, options.unsharpRadius, options.unsharpThreshold);
-  }
   return result;
 }
 
@@ -662,33 +651,6 @@ function resizeAndUnsharp(options, cache) {
 function invokeResize(tileOpts, opts) {
   return Promise.resolve().then(() => {
     return { data: resizeAndUnsharp(tileOpts, opts.__mathCache) };
-    if (!this.features.ww) {
-      return { data: this.__mathlib.resizeAndUnsharp(tileOpts, opts.__mathCache) };
-    }
-    return new Promise((resolve, reject) => {
-      let w = this.__workersPool.acquire();
-      if (opts.cancelToken)
-        opts.cancelToken.catch((err) => reject(err));
-      w.value.onmessage = (ev) => {
-        w.release();
-        if (ev.data.err)
-          reject(ev.data.err);
-        else
-          resolve(ev.data);
-      };
-      let transfer = [];
-      if (tileOpts.src)
-        transfer.push(tileOpts.src.buffer);
-      if (tileOpts.srcBitmap)
-        transfer.push(tileOpts.srcBitmap);
-      w.value.postMessage({
-        opts: tileOpts,
-        features: this.__requested_features,
-        preload: {
-          wasm_nodule: this.__mathlib.__
-        }
-      }, transfer);
-    });
   });
 }
 
@@ -707,6 +669,14 @@ function landTileData(tile, result, stageEnv) {
     stageEnv.toCtx.putImageData(toImageData, tile.toX, tile.toY, tile.toInnerX - tile.toX, tile.toInnerY - tile.toY, tile.toInnerWidth, tile.toInnerHeight);
   }
   return null;
+}
+
+// src/worker/pica/client/utils.js
+function isCanvas(element) {
+  return element instanceof OffscreenCanvas;
+}
+function isImageBitmap(element) {
+  return element instanceof ImageBitmap;
 }
 
 // src/worker/pica/client/tileAndResize.js
@@ -1023,14 +993,6 @@ function createStages(fromWidth, fromHeight, toWidth, toHeight, srcTileSize, des
   return result;
 }
 
-// src/worker/pica/client/utils.js
-function isCanvas(element) {
-  return element instanceof OffscreenCanvas;
-}
-function isImageBitmap(element) {
-  return element instanceof ImageBitmap;
-}
-
 // src/worker/pica/client/extractTileData.js
 function extractTileData(tile, from, opts, stageEnv, extractTo) {
   let tmpCanvas = new OffscreenCanvas(tile.width, tile.height);
@@ -1046,16 +1008,14 @@ function extractTileData(tile, from, opts, stageEnv, extractTo) {
 var PIXEL_EPSILON = 0.00001;
 function pixelFloor(x) {
   var nearest = Math.round(x);
-  if (Math.abs(x - nearest) < PIXEL_EPSILON) {
+  if (Math.abs(x - nearest) < PIXEL_EPSILON)
     return nearest;
-  }
   return Math.floor(x);
 }
 function pixelCeil(x) {
   var nearest = Math.round(x);
-  if (Math.abs(x - nearest) < PIXEL_EPSILON) {
+  if (Math.abs(x - nearest) < PIXEL_EPSILON)
     return nearest;
-  }
   return Math.ceil(x);
 }
 function createRegions(options) {
@@ -1489,9 +1449,8 @@ function unsharp(img, width, height, amount, radius, threshold) {
 // src/worker/pica/worker/resizeAndUnsharp.js
 function resizeAndUnsharp(options, cache) {
   let result = resize(options, cache);
-  if (options.unsharpAmount) {
+  if (options.unsharpAmount)
     unsharp(result, options.toWidth, options.toHeight, options.unsharpAmount, options.unsharpRadius, options.unsharpThreshold);
-  }
   return result;
 }
 
@@ -1499,33 +1458,6 @@ function resizeAndUnsharp(options, cache) {
 function invokeResize(tileOpts, opts) {
   return Promise.resolve().then(() => {
     return { data: resizeAndUnsharp(tileOpts, opts.__mathCache) };
-    if (!this.features.ww) {
-      return { data: this.__mathlib.resizeAndUnsharp(tileOpts, opts.__mathCache) };
-    }
-    return new Promise((resolve, reject) => {
-      let w = this.__workersPool.acquire();
-      if (opts.cancelToken)
-        opts.cancelToken.catch((err) => reject(err));
-      w.value.onmessage = (ev) => {
-        w.release();
-        if (ev.data.err)
-          reject(ev.data.err);
-        else
-          resolve(ev.data);
-      };
-      let transfer = [];
-      if (tileOpts.src)
-        transfer.push(tileOpts.src.buffer);
-      if (tileOpts.srcBitmap)
-        transfer.push(tileOpts.srcBitmap);
-      w.value.postMessage({
-        opts: tileOpts,
-        features: this.__requested_features,
-        preload: {
-          wasm_nodule: this.__mathlib.__
-        }
-      }, transfer);
-    });
   });
 }
 
@@ -1544,6 +1476,14 @@ function landTileData(tile, result, stageEnv) {
     stageEnv.toCtx.putImageData(toImageData, tile.toX, tile.toY, tile.toInnerX - tile.toX, tile.toInnerY - tile.toY, tile.toInnerWidth, tile.toInnerHeight);
   }
   return null;
+}
+
+// src/worker/pica/client/utils.js
+function isCanvas(element) {
+  return element instanceof OffscreenCanvas;
+}
+function isImageBitmap(element) {
+  return element instanceof ImageBitmap;
 }
 
 // src/worker/pica/client/tileAndResize.js

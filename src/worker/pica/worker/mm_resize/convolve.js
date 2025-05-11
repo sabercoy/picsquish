@@ -1,11 +1,8 @@
 // Resize convolvers, pure JS implementation
 //
-'use strict';
-
 
 // Precision of fixed FP values
 //var FIXED_FRAC_BITS = 14;
-
 
 function clampTo8(i) { return i < 0 ? 0 : (i > 255 ? 255 : i); }
 function clampNegative(i) { return i >= 0 ? i : 0; }
@@ -20,9 +17,7 @@ function clampNegative(i) { return i >= 0 ? i : 0; }
 // - output is transposed
 // - output resolution is ~15 bits per channel(for better precision).
 //
-//# use ESM
 export function convolveHor(src, dest, srcW, srcH, destW, filters) {
-
   var r, g, b, a;
   var filterPtr, filterShift, filterSize;
   var srcPtr, srcY, destX, filterVal;
@@ -72,9 +67,7 @@ export function convolveHor(src, dest, srcW, srcH, destW, filters) {
 
 // Supplementary method for `convolveHor()`
 //
-//# use ESM
 export function convolveVert(src, dest, srcW, srcH, destW, filters) {
-
   var r, g, b, a;
   var filterPtr, filterShift, filterSize;
   var srcPtr, srcY, destX, filterVal;
@@ -135,7 +128,6 @@ export function convolveVert(src, dest, srcW, srcH, destW, filters) {
 //
 // For images without alpha channel this method is slower than `convolveHor()`
 //
-//# use ESM
 export function convolveHorWithPre(src, dest, srcW, srcH, destW, filters) {
 
   var r, g, b, a, alpha;
@@ -194,9 +186,7 @@ export function convolveHorWithPre(src, dest, srcW, srcH, destW, filters) {
 
 // Supplementary method for `convolveHorWithPre()`
 //
-//# use ESM
 export function convolveVertWithPre(src, dest, srcW, srcH, destW, filters) {
-
   var r, g, b, a;
   var filterPtr, filterShift, filterSize;
   var srcPtr, srcY, destX, filterVal;
@@ -257,11 +247,3 @@ export function convolveVertWithPre(src, dest, srcW, srcH, destW, filters) {
     srcOffset  = ((srcY + 1) * srcW * 4)|0;
   }
 }
-
-//# use ESM
-//# module.exports = {
-//#   convolveHor,
-//#   convolveVert,
-//#   convolveHorWithPre,
-//#   convolveVertWithPre
-//# };

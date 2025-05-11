@@ -7,24 +7,17 @@
 // - length - filter length (in src points)
 // - data - filter values sequence
 //
-'use strict';
 
-//# use ESM
-//# var FILTER_INFO = require('./resize_filter_info');
 import * as FILTER_INFO from './resize_filter_info'
 
 // Precision of fixed FP values
 var FIXED_FRAC_BITS = 14;
 
-
 function toFixedPoint(num) {
   return Math.round(num * ((1 << FIXED_FRAC_BITS) - 1));
 }
 
-//# use ESM
-//# module.exports = function resizeFilterGen(filter, srcSize, destSize, scale, offset) {
 export function resizeFilterGen(filter, srcSize, destSize, scale, offset) {
-
   var filterFunction = FILTER_INFO.filter[filter].fn;
 
   var scaleInverted = 1.0 / scale;

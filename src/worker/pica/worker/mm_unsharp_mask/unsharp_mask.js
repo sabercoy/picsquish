@@ -7,13 +7,8 @@
 // Image is converted from RGB to HSV, unsharp mask is applied to the
 // brightness channel and then image is converted back to RGB.
 //
-'use strict';
 
-
-//# use ESM
-//# var glur_mono16 = require('glur/mono16');
 import glur_mono16 from 'glur'
-
 
 function hsv_v16(img, width, height) {
   var size = width * height;
@@ -29,9 +24,6 @@ function hsv_v16(img, width, height) {
   return out;
 }
 
-
-//# use ESM
-//# module.exports = function unsharp(img, width, height, amount, radius, threshold) {
 export function unsharp(img, width, height, amount, radius, threshold) {
   var v1, v2, vmul;
   var diff, iTimes4;

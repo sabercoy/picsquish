@@ -3,8 +3,6 @@
 //
 // Presets for quality 0..3. Filter functions + window size
 //
-'use strict';
-
 
 const filter = {
   // Nearest neibor
@@ -62,12 +60,4 @@ const filter = {
   }
 };
 
-//# use ESM and exclude legacy mapping
-//# module.exports = {
-//#   filter: filter,
-//#   // Legacy mapping
-//#   f2q: { box: 0, hamming: 1, lanczos2: 2, lanczos3: 3 },
-//#   q2f: [ 'box', 'hamming', 'lanczos2', 'lanczos3' ]
-//# };
 export { filter }
-//export const ALL = { filter }

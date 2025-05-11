@@ -1,11 +1,6 @@
-'use strict';
 
-//# use ESM
-//# const createFilters        = require('./resize_filter_gen');
-//# const { convolveHor, convolveVert, convolveHorWithPre, convolveVertWithPre } = require('./convolve');
 import { resizeFilterGen as createFilters } from './resize_filter_gen'
 import { convolveHor, convolveVert, convolveHorWithPre, convolveVertWithPre } from './convolve'
-
 
 function hasAlpha(src, width, height) {
   let ptr = 3, len = (width * height * 4)|0;
@@ -21,8 +16,6 @@ function resetAlpha(dst, width, height) {
   while (ptr < len) { dst[ptr] = 0xFF; ptr = (ptr + 4)|0; }
 }
 
-//# use ESM
-//# module.exports = function resize(options) {
 export function resize(options) {
   const src   = options.src;
   const srcW  = options.width;

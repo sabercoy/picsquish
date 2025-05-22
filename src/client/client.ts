@@ -3,19 +3,22 @@ import { TaskQueue } from './task-queue'
 
 export class PicSquish {
   #taskQueue: TaskQueue
-  #options: Options
+  #globalOptions: Options
 
   constructor(options: Options) {
-    this.#taskQueue = new TaskQueue()
-    this.#options = options
+    const hardwareConcurrency = typeof navigator === 'undefined' ? 1 : navigator.hardwareConcurrency
+    const maxWorkerPoolSize = options.maxWorkerPoolSize || Math.min(hardwareConcurrency, 4)
+    const maxWorkerIdleTime = options.maxWorkerIdleTime || 2000
+
+    this.#taskQueue = new TaskQueue(maxWorkerPoolSize, maxWorkerIdleTime)
+    this.#globalOptions = options
   }
 
-  squish(blob: Blob, options?: Options) {
-    const maxDimension = options?.maxDimension || this.#options.maxDimension
-    const useMainThread = options?.useMainThread || this.#options.useMainThread
+  squish(blob: Blob, localOptions?: Options) {
+    const options = localOptions ? { ...this.#globalOptions, ...localOptions } : this.#globalOptions
 
-    if (useMainThread) return resize(blob, maxDimension)
+    if (options.useMainThread) return resize(blob, options)
 
-    return this.#taskQueue.addTask({ blob, options: options || this.#options })
+    return this.#taskQueue.addTask({ blob, options })
   }
 }

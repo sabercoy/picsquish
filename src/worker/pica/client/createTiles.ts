@@ -1,37 +1,39 @@
+import { PicaBaseOptions } from '../../..'
+
 const PIXEL_EPSILON = 1e-5
 
-function pixelFloor(x) {
-  var nearest = Math.round(x)
+function pixelFloor(x: number) {
+  let nearest = Math.round(x)
 
   if (Math.abs(x - nearest) < PIXEL_EPSILON) return nearest
 
   return Math.floor(x)
 }
 
-function pixelCeil(x) {
-  var nearest = Math.round(x)
+function pixelCeil(x: number) {
+  let nearest = Math.round(x)
 
   if (Math.abs(x - nearest) < PIXEL_EPSILON) return nearest
 
   return Math.ceil(x)
 }
 
-export function createRegions(options) {
-  var scaleX = options.toWidth / options.width
-  var scaleY = options.toHeight / options.height
+export function createTiles(options: PicaBaseOptions & { srcTileSize: number }) {
+  let scaleX = options.toWidth / options.width
+  let scaleY = options.toHeight / options.height
 
-  var innerTileWidth = pixelFloor(options.srcTileSize * scaleX) - 2 * options.destTileBorder
-  var innerTileHeight = pixelFloor(options.srcTileSize * scaleY) - 2 * options.destTileBorder
+  let innerTileWidth = pixelFloor(options.srcTileSize * scaleX) - 2 * options.destTileBorder
+  let innerTileHeight = pixelFloor(options.srcTileSize * scaleY) - 2 * options.destTileBorder
 
   // prevent infinite loop, this should never happen
   if (innerTileWidth < 1 || innerTileHeight < 1) {
     throw new Error('Internal error in pica: target tile width/height is too small.')
   }
 
-  var x, y
-  var innerX, innerY, toTileWidth, toTileHeight
-  var tiles = []
-  var tile
+  let x, y
+  let innerX, innerY, toTileWidth, toTileHeight
+  let tiles = []
+  let tile
 
   // we go top-to-down instead of left-to-right to make image displayed from top to
   // doesn in the browser

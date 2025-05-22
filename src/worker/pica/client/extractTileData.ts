@@ -1,7 +1,16 @@
-export function extractTileData(tile, from, opts, stageEnv, extractTo) {
-  let tmpCanvas = new OffscreenCanvas(tile.width, tile.height)
+import { PicaTile, PicaTileOptions, StageEnv } from '../../..'
 
-  let tmpCtx = tmpCanvas.getContext('2d')
+export function extractTileData(
+  tile: PicaTile,
+  from: ImageBitmap | OffscreenCanvas,
+  opts: null,
+  stageEnv: StageEnv,
+  extractTo: PicaTileOptions,
+) {
+  const tmpCanvas = new OffscreenCanvas(tile.width, tile.height)
+  const tmpCtx = tmpCanvas.getContext('2d')
+  if (!tmpCtx) throw new Error('Pica: Canvas context is not supported')
+    
   tmpCtx.globalCompositeOperation = 'copy'
   tmpCtx.drawImage(
     stageEnv.srcImageBitmap || from,

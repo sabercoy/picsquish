@@ -9,7 +9,7 @@ export type TaskMessage = TaskData & {
 };
 export declare class TaskQueue {
     #private;
-    constructor();
+    constructor(maxWorkerPoolSize: number, maxWorkerIdleTime: number);
     addTask(taskData: TaskData): Promise<ImageBitmap>;
 }
 export {};

@@ -1,4 +1,7 @@
-export function createRegions(options: any): {
+import { PicaBaseOptions } from '../../..';
+export declare function createTiles(options: PicaBaseOptions & {
+    srcTileSize: number;
+}): {
     toX: number;
     toY: number;
     toWidth: number;

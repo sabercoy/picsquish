@@ -1,4 +1,4 @@
-export function convolveHor(src: any, dest: any, srcW: any, srcH: any, destW: any, filters: any): void;
-export function convolveVert(src: any, dest: any, srcW: any, srcH: any, destW: any, filters: any): void;
-export function convolveHorWithPre(src: any, dest: any, srcW: any, srcH: any, destW: any, filters: any): void;
-export function convolveVertWithPre(src: any, dest: any, srcW: any, srcH: any, destW: any, filters: any): void;
+export declare function convolveHor(src: Uint8ClampedArray<ArrayBufferLike>, dest: Uint8Array<ArrayBufferLike> | Uint16Array<ArrayBuffer>, srcW: number, srcH: number, destW: number, filters: Int16Array<ArrayBuffer>): void;
+export declare function convolveVert(src: Uint8ClampedArray<ArrayBufferLike> | Uint16Array<ArrayBuffer>, dest: Uint8Array<ArrayBufferLike>, srcW: number, srcH: number, destW: number, filters: Int16Array<ArrayBuffer>): void;
+export declare function convolveHorWithPre(src: Uint8ClampedArray<ArrayBufferLike>, dest: Uint8Array<ArrayBufferLike> | Uint16Array<ArrayBuffer>, srcW: number, srcH: number, destW: number, filters: Int16Array<ArrayBuffer>): void;
+export declare function convolveVertWithPre(src: Uint8ClampedArray<ArrayBufferLike> | Uint16Array<ArrayBuffer>, dest: Uint8Array<ArrayBufferLike>, srcW: number, srcH: number, destW: number, filters: Int16Array<ArrayBuffer>): void;

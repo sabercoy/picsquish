@@ -1,1 +1,2 @@
-export function resizeAndUnsharp(options: any, cache: any): any;
+import { PicaTileOptions } from '../../..';
+export declare function resizeAndUnsharp(picaTileOptions: PicaTileOptions): Uint8Array<ArrayBufferLike>;

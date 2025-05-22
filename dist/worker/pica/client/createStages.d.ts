@@ -1,1 +1,1 @@
-export function createStages(fromWidth: any, fromHeight: any, toWidth: any, toHeight: any, srcTileSize: any, destTileBorder: any): any[][];
+export declare function createStages(fromWidth: number, fromHeight: number, toWidth: number, toHeight: number, srcTileSize: number, destTileBorder: number): number[][];

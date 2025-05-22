@@ -109,16 +109,17 @@ class WorkerPool {
 }
 
 export class TaskQueue {
-  #maxIdle: number
+  #maxIdleTime: number
   #maxPoolSize: number
   #taskQueue: PendingTask[]
   #pool: WorkerPool
 
-  constructor() {
-    const hardwareConcurrency = typeof navigator === 'undefined' ? 1 : navigator.hardwareConcurrency
-
-    this.#maxIdle = 2000
-    this.#maxPoolSize = Math.min(hardwareConcurrency, 4)
+  constructor(
+    maxWorkerPoolSize: number,
+    maxWorkerIdleTime: number,
+  ) {
+    this.#maxPoolSize = maxWorkerPoolSize
+    this.#maxIdleTime = maxWorkerIdleTime
     this.#taskQueue = []
     this.#pool = new WorkerPool()
   }
@@ -138,7 +139,7 @@ export class TaskQueue {
       }
 
       this.#pool.removeTask(taskId)
-      if (finishedWorker) this.#pool.setWorkerTimeout(finishedWorker, this.#maxIdle)
+      if (finishedWorker) this.#pool.setWorkerTimeout(finishedWorker, this.#maxIdleTime)
       this.#processQueue()
     }
 
@@ -171,10 +172,7 @@ export class TaskQueue {
     return new Promise<TaskResult['output']>((resolve, reject) => {
       this.#taskQueue.push({
         id: createId(),
-        data: {
-          blob: taskData.blob,
-          options: taskData.options,
-        },
+        data: { blob: taskData.blob, options: taskData.options },
         resolve,
         reject
       })

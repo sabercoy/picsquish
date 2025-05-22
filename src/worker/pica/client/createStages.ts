@@ -15,7 +15,14 @@
 // min size = 1 can consume large amount of memory
 const MIN_INNER_TILE_SIZE = 2
 
-export function createStages(fromWidth, fromHeight, toWidth, toHeight, srcTileSize, destTileBorder) {
+export function createStages(
+  fromWidth: number,
+  fromHeight: number,
+  toWidth: number,
+  toHeight: number,
+  srcTileSize: number,
+  destTileBorder: number,
+) {
   let scaleX = toWidth / fromWidth
   let scaleY = toHeight / fromHeight
 

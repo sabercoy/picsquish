@@ -1,2 +1,2 @@
-export function isCanvas(element: any): element is OffscreenCanvas;
-export function isImageBitmap(element: any): element is ImageBitmap;
+export declare function isCanvas(element: ImageBitmap | OffscreenCanvas): element is OffscreenCanvas;
+export declare function isImageBitmap(element: ImageBitmap | OffscreenCanvas): element is ImageBitmap;

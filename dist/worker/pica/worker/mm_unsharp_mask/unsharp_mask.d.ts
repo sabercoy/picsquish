@@ -1,1 +1,1 @@
-export function unsharp(img: any, width: any, height: any, amount: any, radius: any, threshold: any): void;
+export declare function unsharp(img: Uint8Array<ArrayBufferLike>, width: number, height: number, amount: number, radius: number, threshold: number): void;

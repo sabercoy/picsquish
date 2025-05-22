@@ -1,1 +1,2 @@
-export function processStages(stages: any, from: any, to: any, opts: any): any;
+import { PicaOptions } from '../../..';
+export declare function processStages(stages: number[][], from: ImageBitmap | OffscreenCanvas, to: ImageBitmap | OffscreenCanvas, picaOptions: PicaOptions): Promise<any>;

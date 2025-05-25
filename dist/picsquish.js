@@ -670,10 +670,11 @@ async function processStages(stages, original, srcTileSize, destTileBorder, filt
 // src/index.ts
 async function resize2(blob, options) {
   const maxDimension = options.maxDimension;
-  const tileSize = options.tileSize ?? 1024;
-  const unsharpAmount = options.unsharpAmount ?? 0;
-  const unsharpRadius = options.unsharpRadius ?? 0;
-  const unsharpThreshold = options.unsharpThreshold ?? 0;
+  const tileSize = options.tileSize || 1024;
+  const filter = options.filter || "mks2013";
+  const unsharpAmount = options.unsharpAmount || 0;
+  const unsharpRadius = options.unsharpRadius || 0;
+  const unsharpThreshold = options.unsharpThreshold || 0;
   const imageBitmap = await createImageBitmap(blob);
   const originalWidth = imageBitmap.width;
   const originalHeight = imageBitmap.height;
@@ -685,18 +686,7 @@ async function resize2(blob, options) {
   const DEST_TILE_BORDER = 3;
   const destTileBorder = Math.ceil(Math.max(DEST_TILE_BORDER, 2.5 * unsharpRadius | 0));
   const stages = createStages(originalWidth, originalHeight, toWidth, toHeight, tileSize, destTileBorder);
-  const picaOptions = {
-    filter: "mks2013",
-    unsharpAmount,
-    unsharpRadius,
-    unsharpThreshold,
-    width: originalWidth,
-    height: originalHeight,
-    toWidth,
-    toHeight,
-    destTileBorder
-  };
-  const result = await processStages(stages, imageBitmap, 1024, picaOptions.destTileBorder, picaOptions.filter, picaOptions.unsharpAmount, picaOptions.unsharpRadius, picaOptions.unsharpThreshold);
+  const result = await processStages(stages, imageBitmap, tileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
   return result.transferToImageBitmap();
 }
 
@@ -1374,10 +1364,11 @@ async function processStages(stages, original, srcTileSize, destTileBorder, filt
 // src/index.ts
 async function resize2(blob, options) {
   const maxDimension = options.maxDimension;
-  const tileSize = options.tileSize ?? 1024;
-  const unsharpAmount = options.unsharpAmount ?? 0;
-  const unsharpRadius = options.unsharpRadius ?? 0;
-  const unsharpThreshold = options.unsharpThreshold ?? 0;
+  const tileSize = options.tileSize || 1024;
+  const filter = options.filter || "mks2013";
+  const unsharpAmount = options.unsharpAmount || 0;
+  const unsharpRadius = options.unsharpRadius || 0;
+  const unsharpThreshold = options.unsharpThreshold || 0;
   const imageBitmap = await createImageBitmap(blob);
   const originalWidth = imageBitmap.width;
   const originalHeight = imageBitmap.height;
@@ -1389,18 +1380,7 @@ async function resize2(blob, options) {
   const DEST_TILE_BORDER = 3;
   const destTileBorder = Math.ceil(Math.max(DEST_TILE_BORDER, 2.5 * unsharpRadius | 0));
   const stages = createStages(originalWidth, originalHeight, toWidth, toHeight, tileSize, destTileBorder);
-  const picaOptions = {
-    filter: "mks2013",
-    unsharpAmount,
-    unsharpRadius,
-    unsharpThreshold,
-    width: originalWidth,
-    height: originalHeight,
-    toWidth,
-    toHeight,
-    destTileBorder
-  };
-  const result = await processStages(stages, imageBitmap, 1024, picaOptions.destTileBorder, picaOptions.filter, picaOptions.unsharpAmount, picaOptions.unsharpRadius, picaOptions.unsharpThreshold);
+  const result = await processStages(stages, imageBitmap, tileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
   return result.transferToImageBitmap();
 }
 

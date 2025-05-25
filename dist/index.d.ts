@@ -8,32 +8,7 @@ export type Options = {
     unsharpAmount?: number;
     unsharpRadius?: number;
     unsharpThreshold?: number;
-};
-export type PicaBaseOptions = {
-    width: number;
-    height: number;
-    toWidth: number;
-    toHeight: number;
-    destTileBorder: number;
-};
-export type PicaOptions = PicaBaseOptions & Required<Pick<Options, 'unsharpAmount' | 'unsharpRadius' | 'unsharpThreshold'>> & {
-    filter: Filter;
-};
-export type PicaTileOptions = {
-    width: number;
-    height: number;
-    toWidth: number;
-    toHeight: number;
-    scaleX: number;
-    scaleY: number;
-    offsetX: number;
-    offsetY: number;
-    filter: Filter;
-    unsharpAmount: number;
-    unsharpRadius: number;
-    unsharpThreshold: number;
-    src?: Uint8ClampedArray<ArrayBufferLike>;
-    dest?: Uint8Array;
+    filter?: Filter;
 };
 export type TileData = {
     toX: number;
@@ -52,12 +27,6 @@ export type TileData = {
     y: number;
     width: number;
     height: number;
-};
-export type StageEnv = {
-    srcCtx: OffscreenCanvasRenderingContext2D | null;
-    srcImageBitmap: ImageBitmap | null;
-    isImageBitmapReused: boolean;
-    toCtx: OffscreenCanvasRenderingContext2D | null;
 };
 export type ResizeStage = {
     toWidth: number;

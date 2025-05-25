@@ -12,35 +12,7 @@ export type Options = {
   unsharpAmount?: number
   unsharpRadius?: number
   unsharpThreshold?: number
-}
-
-export type PicaBaseOptions = {
-  width: number
-  height: number
-  toWidth: number
-  toHeight: number
-  destTileBorder: number
-}
-
-export type PicaOptions = PicaBaseOptions & Required<Pick<Options, 'unsharpAmount' | 'unsharpRadius' | 'unsharpThreshold'>> & {
-  filter: Filter
-}
-
-export type PicaTileOptions = {
-  width: number
-  height: number
-  toWidth: number
-  toHeight: number
-  scaleX: number
-  scaleY: number
-  offsetX: number
-  offsetY: number
-  filter: Filter
-  unsharpAmount: number
-  unsharpRadius: number
-  unsharpThreshold: number
-  src?: Uint8ClampedArray<ArrayBufferLike>
-  dest?: Uint8Array
+  filter?: Filter
 }
 
 export type TileData = {
@@ -62,13 +34,6 @@ export type TileData = {
   height: number
 }
 
-export type StageEnv = {
-  srcCtx: OffscreenCanvasRenderingContext2D | null
-  srcImageBitmap: ImageBitmap | null
-  isImageBitmapReused: boolean
-  toCtx: OffscreenCanvasRenderingContext2D | null
-}
-
 export type ResizeStage = {
   toWidth: number
   toHeight: number
@@ -76,11 +41,12 @@ export type ResizeStage = {
 
 export async function resize(blob: Blob, options: Options) {
   const maxDimension = options.maxDimension
-  const tileSize = options.tileSize ?? 1024
+  const tileSize = options.tileSize || 1024
+  const filter = options.filter || 'mks2013'
 
-  const unsharpAmount = options.unsharpAmount ?? 0
-  const unsharpRadius = options.unsharpRadius ?? 0
-  const unsharpThreshold = options.unsharpThreshold ?? 0
+  const unsharpAmount = options.unsharpAmount || 0
+  const unsharpRadius = options.unsharpRadius || 0
+  const unsharpThreshold = options.unsharpThreshold || 0
 
   const imageBitmap = await createImageBitmap(blob)
   const originalWidth = imageBitmap.width
@@ -103,27 +69,15 @@ export async function resize(blob: Blob, options: Options) {
     destTileBorder,
   )
 
-  const picaOptions: PicaOptions = {
-    filter: 'mks2013',
-    unsharpAmount,
-    unsharpRadius,
-    unsharpThreshold,
-    width: originalWidth,
-    height: originalHeight,
-    toWidth: toWidth,
-    toHeight: toHeight,
-    destTileBorder,
-  }
-
   const result = await processStages(
     stages,
     imageBitmap,
-    1024,
-    picaOptions.destTileBorder,
-    picaOptions.filter,
-    picaOptions.unsharpAmount,
-    picaOptions.unsharpRadius,
-    picaOptions.unsharpThreshold,
+    tileSize,
+    destTileBorder,
+    filter,
+    unsharpAmount,
+    unsharpRadius,
+    unsharpThreshold,
   )
 
   return result.transferToImageBitmap()

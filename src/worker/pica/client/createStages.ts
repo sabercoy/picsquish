@@ -11,6 +11,8 @@
 // quality algorithms for first stages.
 //
 
+import { ResizeStage } from '../../..'
+
 // min size = 0 results in infinite loop,
 // min size = 1 can consume large amount of memory
 const MIN_INNER_TILE_SIZE = 2
@@ -22,43 +24,43 @@ export function createStages(
   toHeight: number,
   srcTileSize: number,
   destTileBorder: number,
-) {
-  let scaleX = toWidth / fromWidth
-  let scaleY = toHeight / fromHeight
+): ResizeStage[] {
+  const scaleX = toWidth / fromWidth
+  const scaleY = toHeight / fromHeight
 
   // derived from createRegions equation:
   // innerTileWidth = pixelFloor(srcTileSize * scaleX) - 2 * destTileBorder;
-  let minScale = (2 * destTileBorder + MIN_INNER_TILE_SIZE + 1) / srcTileSize
+  const minScale = (2 * destTileBorder + MIN_INNER_TILE_SIZE + 1) / srcTileSize
 
   // refuse to scale image multiple times by less than twice each time,
   // it could only happen because of invalid options
-  if (minScale > 0.5) return [ [ toWidth, toHeight ] ]
+  if (minScale > 0.5) return [[toWidth, toHeight]]
 
-  let stageCount = Math.ceil(Math.log(Math.min(scaleX, scaleY)) / Math.log(minScale))
+  const stageCount = Math.ceil(Math.log(Math.min(scaleX, scaleY)) / Math.log(minScale))
 
   // no additional resizes are necessary,
   // stageCount can be zero or be negative when enlarging the image
-  if (stageCount <= 1) return [ [ toWidth, toHeight ] ]
+  if (stageCount <= 1) return [[toWidth, toHeight]]
 
-  let result = []
+  const stages: ResizeStage[] = []
 
   for (let i = 0; i < stageCount; i++) {
-    let width = Math.round(
+    const width = Math.round(
       Math.pow(
         Math.pow(fromWidth, stageCount - i - 1) * Math.pow(toWidth, i + 1),
         1 / stageCount
       )
     )
 
-    let height = Math.round(
+    const height = Math.round(
       Math.pow(
         Math.pow(fromHeight, stageCount - i - 1) * Math.pow(toHeight, i + 1),
         1 / stageCount
       )
     )
 
-    result.push([ width, height ])
+    stages.push([width, height])
   }
 
-  return result
+  return stages
 }

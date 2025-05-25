@@ -1,2 +1,2 @@
-import { PicaOptions } from '../../..';
-export declare function processStages(stages: number[][], from: ImageBitmap | OffscreenCanvas, to: ImageBitmap | OffscreenCanvas, picaOptions: PicaOptions): Promise<any>;
+import { Filter, ResizeStage } from '../../..';
+export declare function processStages(stages: ResizeStage[], from: ImageBitmap | OffscreenCanvas, to: ImageBitmap | OffscreenCanvas, currentWidth: number, currentHeight: number, currentToWidth: number, currentToHeight: number, srcTileSize: number, destTileBorder: number, filter: Filter, unsharpAmount: number, unsharpRadius: number, unsharpThreshold: number): Promise<any>;

@@ -69,6 +69,8 @@ export type StageEnv = {
   toCtx: OffscreenCanvasRenderingContext2D | null
 }
 
+export type ResizeStage = [number, number]
+
 export async function resize(blob: Blob, options: Options) {
   const maxDimension = options.maxDimension
   const tileSize = options.tileSize ?? 1024
@@ -112,7 +114,22 @@ export async function resize(blob: Blob, options: Options) {
     destTileBorder,
   }
 
-  const result = await processStages(stages, imageBitmap, offscreenCanvas, picaOptions)
+  const result = await processStages(
+    stages,
+    imageBitmap,
+    offscreenCanvas,
+    picaOptions.width,
+    picaOptions.height,
+    picaOptions.toWidth,
+    picaOptions.toHeight,
+    1024,
+    picaOptions.destTileBorder,
+    picaOptions.filter,
+    picaOptions.unsharpAmount,
+    picaOptions.unsharpRadius,
+    picaOptions.unsharpThreshold,
+  )
+
   const resizedImageBitmap = result.transferToImageBitmap()
 
   return resizedImageBitmap as ImageBitmap

@@ -1,15 +1,36 @@
-import { PicaOptions } from '../../..'
+import { Filter, PicaOptions, ResizeStage } from '../../..'
 import { tileAndResize } from './tileAndResize'
 
+function processStage() {
+
+}
+
 export async function processStages(
-  stages: number[][],
+  stages: ResizeStage[],
   from: ImageBitmap | OffscreenCanvas,
   to: ImageBitmap | OffscreenCanvas,
-  picaOptions: PicaOptions,
+  currentWidth: number,
+  currentHeight: number,
+  currentToWidth: number,
+  currentToHeight: number,
+  srcTileSize: number,
+  destTileBorder: number,
+  filter: Filter,
+  unsharpAmount: number,
+  unsharpRadius: number,
+  unsharpThreshold: number,
 ) {
-  let [toWidth, toHeight] = stages.shift() as [number, number]
+  // for (const stage in stages) {
+  //   await tileAndResize(
+  //     from, to, picaOptions)
+  // }
 
-  let isLastStage = (stages.length === 0)
+  const stage = stages.shift()
+  if (!stage) throw new Error('Pica: Stages are empty')
+
+  const [toWidth, toHeight] = stage
+
+  let isLastStage = stages.length === 0
 
   // // Optimization for legacy filters -
   // // only use user-defined quality for the last stage,
@@ -19,8 +40,8 @@ export async function processStages(
   // // For advanced filters (mks2013 and custom) - skip optimization,
   // // because need to apply sharpening every time
 
-  picaOptions.toWidth = toWidth
-  picaOptions.toHeight = toHeight
+  currentToWidth = toWidth
+  currentToHeight = toHeight
 
   let tempCanvas!: OffscreenCanvas
 
@@ -29,34 +50,49 @@ export async function processStages(
     tempCanvas = new OffscreenCanvas(toWidth, toHeight)
   }
 
-  await tileAndResize(from, (isLastStage ? to : tempCanvas), picaOptions)
+  // const nextTo = stages.length === 0 ? to : new OffscreenCanvas(toWidth, toHeight)
+
+  await tileAndResize(
+    from,
+    isLastStage ? to : tempCanvas,
+    currentWidth,
+    currentHeight,
+    currentToWidth,
+    currentToHeight,
+    srcTileSize,
+    destTileBorder,
+    filter,
+    unsharpAmount,
+    unsharpRadius,
+    unsharpThreshold,
+  )
+
   if (isLastStage) return to
-  picaOptions.width = toWidth
-  picaOptions.height = toHeight
-  const result: any = await processStages(stages, from, tempCanvas, picaOptions)
-  if (tempCanvas) {
-    // Safari 12 workaround
-    // https://github.com/nodeca/pica/issues/199
-    tempCanvas.width = tempCanvas.height = 0
-  }
+  
+  currentWidth = toWidth
+  currentHeight = toHeight
+
+  const result: any = await processStages(
+    stages,
+    tempCanvas,
+    to,
+    currentWidth,
+    currentHeight,
+    currentToWidth,
+    currentToHeight,
+    srcTileSize,
+    destTileBorder,
+    filter,
+    unsharpAmount,
+    unsharpRadius,
+    unsharpThreshold,
+  )
+
+  // if (tempCanvas) {
+  //   // Safari 12 workaround
+  //   // https://github.com/nodeca/pica/issues/199
+  //   tempCanvas.width = tempCanvas.height = 0
+  // }
 
   return result
-
-  // return tileAndResize(from, (isLastStage ? to : tempCanvas), picaOptions)
-  //   .then(() => {
-  //     if (isLastStage) return to
-
-  //     picaOptions.width = toWidth
-  //     picaOptions.height = toHeight
-  //     return processStages(stages, tempCanvas, to, picaOptions)
-  //   })
-  //   .then(res => {
-  //     if (tempCanvas) {
-  //       // Safari 12 workaround
-  //       // https://github.com/nodeca/pica/issues/199
-  //       tempCanvas.width = tempCanvas.height = 0
-  //     }
-
-  //     return res
-  //   })
 }

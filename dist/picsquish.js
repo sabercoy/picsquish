@@ -169,21 +169,21 @@ var require_glur = __commonJS((exports, module) => {
 // src/worker/pica/client/createStages.ts
 var MIN_INNER_TILE_SIZE = 2;
 function createStages(fromWidth, fromHeight, toWidth, toHeight, srcTileSize, destTileBorder) {
-  let scaleX = toWidth / fromWidth;
-  let scaleY = toHeight / fromHeight;
-  let minScale = (2 * destTileBorder + MIN_INNER_TILE_SIZE + 1) / srcTileSize;
+  const scaleX = toWidth / fromWidth;
+  const scaleY = toHeight / fromHeight;
+  const minScale = (2 * destTileBorder + MIN_INNER_TILE_SIZE + 1) / srcTileSize;
   if (minScale > 0.5)
     return [[toWidth, toHeight]];
-  let stageCount = Math.ceil(Math.log(Math.min(scaleX, scaleY)) / Math.log(minScale));
+  const stageCount = Math.ceil(Math.log(Math.min(scaleX, scaleY)) / Math.log(minScale));
   if (stageCount <= 1)
     return [[toWidth, toHeight]];
-  let result = [];
+  const stages = [];
   for (let i = 0;i < stageCount; i++) {
-    let width = Math.round(Math.pow(Math.pow(fromWidth, stageCount - i - 1) * Math.pow(toWidth, i + 1), 1 / stageCount));
-    let height = Math.round(Math.pow(Math.pow(fromHeight, stageCount - i - 1) * Math.pow(toHeight, i + 1), 1 / stageCount));
-    result.push([width, height]);
+    const width = Math.round(Math.pow(Math.pow(fromWidth, stageCount - i - 1) * Math.pow(toWidth, i + 1), 1 / stageCount));
+    const height = Math.round(Math.pow(Math.pow(fromHeight, stageCount - i - 1) * Math.pow(toHeight, i + 1), 1 / stageCount));
+    stages.push([width, height]);
   }
-  return result;
+  return stages;
 }
 
 // src/worker/pica/client/extractTileData.ts
@@ -213,37 +213,32 @@ function pixelCeil(x) {
     return nearest;
   return Math.ceil(x);
 }
-function createTiles(options) {
-  let scaleX = options.toWidth / options.width;
-  let scaleY = options.toHeight / options.height;
-  let innerTileWidth = pixelFloor(options.srcTileSize * scaleX) - 2 * options.destTileBorder;
-  let innerTileHeight = pixelFloor(options.srcTileSize * scaleY) - 2 * options.destTileBorder;
+function createTiles(width, height, srcTileSize, toWidth, toHeight, destTileBorder) {
+  const scaleX = toWidth / width;
+  const scaleY = toHeight / height;
+  const innerTileWidth = pixelFloor(srcTileSize * scaleX) - 2 * destTileBorder;
+  const innerTileHeight = pixelFloor(srcTileSize * scaleY) - 2 * destTileBorder;
   if (innerTileWidth < 1 || innerTileHeight < 1) {
     throw new Error("Internal error in pica: target tile width/height is too small.");
   }
   let x, y;
   let innerX, innerY, toTileWidth, toTileHeight;
-  let tiles = [];
-  let tile;
-  for (innerY = 0;innerY < options.toHeight; innerY += innerTileHeight) {
-    for (innerX = 0;innerX < options.toWidth; innerX += innerTileWidth) {
-      x = innerX - options.destTileBorder;
-      if (x < 0) {
+  const tiles = [];
+  for (innerY = 0;innerY < toHeight; innerY += innerTileHeight) {
+    for (innerX = 0;innerX < toWidth; innerX += innerTileWidth) {
+      x = innerX - destTileBorder;
+      if (x < 0)
         x = 0;
-      }
-      toTileWidth = innerX + innerTileWidth + options.destTileBorder - x;
-      if (x + toTileWidth >= options.toWidth) {
-        toTileWidth = options.toWidth - x;
-      }
-      y = innerY - options.destTileBorder;
-      if (y < 0) {
+      toTileWidth = innerX + innerTileWidth + destTileBorder - x;
+      if (x + toTileWidth >= toWidth)
+        toTileWidth = toWidth - x;
+      y = innerY - destTileBorder;
+      if (y < 0)
         y = 0;
-      }
-      toTileHeight = innerY + innerTileHeight + options.destTileBorder - y;
-      if (y + toTileHeight >= options.toHeight) {
-        toTileHeight = options.toHeight - y;
-      }
-      tile = {
+      toTileHeight = innerY + innerTileHeight + destTileBorder - y;
+      if (y + toTileHeight >= toHeight)
+        toTileHeight = toHeight - y;
+      tiles.push({
         toX: x,
         toY: y,
         toWidth: toTileWidth,
@@ -260,8 +255,7 @@ function createTiles(options) {
         y: pixelFloor(y / scaleY),
         width: pixelCeil(toTileWidth / scaleX),
         height: pixelCeil(toTileHeight / scaleY)
-      };
-      tiles.push(tile);
+      });
     }
   }
   return tiles;
@@ -672,7 +666,7 @@ function isImageBitmap(element) {
 }
 
 // src/worker/pica/client/tileAndResize.ts
-var processTile = (tile, from, picaOptions, stageEnv) => {
+var processTile = (tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, stageEnv) => {
   let tileOptions = {
     width: tile.width,
     height: tile.height,
@@ -682,14 +676,14 @@ var processTile = (tile, from, picaOptions, stageEnv) => {
     scaleY: tile.scaleY,
     offsetX: tile.offsetX,
     offsetY: tile.offsetY,
-    filter: picaOptions.filter,
-    unsharpAmount: picaOptions.unsharpAmount,
-    unsharpRadius: picaOptions.unsharpRadius,
-    unsharpThreshold: picaOptions.unsharpThreshold
+    filter,
+    unsharpAmount,
+    unsharpRadius,
+    unsharpThreshold
   };
   return Promise.resolve(tileOptions).then((tileOptions2) => extractTileData(tile, from, null, stageEnv, tileOptions2)).then((tileOptions2) => invokeResize(tileOptions2)).then((result) => landTileData(tile, result, stageEnv));
 };
-function tileAndResize(from, to, picaOptions) {
+function tileAndResize(from, to, width, height, toWidth, toHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
   let stageEnv = {
     srcCtx: null,
     srcImageBitmap: null,
@@ -707,15 +701,8 @@ function tileAndResize(from, to, picaOptions) {
     }
     throw new Error('Pica: ".from" should be Image, Canvas or ImageBitmap');
   }).then(() => {
-    let tiles = createTiles({
-      width: picaOptions.width,
-      height: picaOptions.height,
-      srcTileSize: 1024,
-      toWidth: picaOptions.toWidth,
-      toHeight: picaOptions.toHeight,
-      destTileBorder: picaOptions.destTileBorder
-    });
-    let jobs = tiles.map((tile) => processTile(tile, from, picaOptions, stageEnv));
+    const tiles = createTiles(width, height, srcTileSize, toWidth, toHeight, destTileBorder);
+    const jobs = tiles.map((tile) => processTile(tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, stageEnv));
     function cleanup(stageEnv2) {
       if (stageEnv2.srcImageBitmap) {
         if (!stageEnv2.isImageBitmapReused)
@@ -734,24 +721,24 @@ function tileAndResize(from, to, picaOptions) {
 }
 
 // src/worker/pica/client/processStages.ts
-async function processStages(stages, from, to, picaOptions) {
-  let [toWidth, toHeight] = stages.shift();
+async function processStages(stages, from, to, currentWidth, currentHeight, currentToWidth, currentToHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
+  const stage = stages.shift();
+  if (!stage)
+    throw new Error("Pica: Stages are empty");
+  const [toWidth, toHeight] = stage;
   let isLastStage = stages.length === 0;
-  picaOptions.toWidth = toWidth;
-  picaOptions.toHeight = toHeight;
+  currentToWidth = toWidth;
+  currentToHeight = toHeight;
   let tempCanvas;
   if (!isLastStage) {
     tempCanvas = new OffscreenCanvas(toWidth, toHeight);
   }
-  await tileAndResize(from, isLastStage ? to : tempCanvas, picaOptions);
+  await tileAndResize(from, isLastStage ? to : tempCanvas, currentWidth, currentHeight, currentToWidth, currentToHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
   if (isLastStage)
     return to;
-  picaOptions.width = toWidth;
-  picaOptions.height = toHeight;
-  const result = await processStages(stages, from, tempCanvas, picaOptions);
-  if (tempCanvas) {
-    tempCanvas.width = tempCanvas.height = 0;
-  }
+  currentWidth = toWidth;
+  currentHeight = toHeight;
+  const result = await processStages(stages, tempCanvas, to, currentWidth, currentHeight, currentToWidth, currentToHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
   return result;
 }
 
@@ -785,7 +772,7 @@ async function resize2(blob, options) {
     toHeight,
     destTileBorder
   };
-  const result = await processStages(stages, imageBitmap, offscreenCanvas, picaOptions);
+  const result = await processStages(stages, imageBitmap, offscreenCanvas, picaOptions.width, picaOptions.height, picaOptions.toWidth, picaOptions.toHeight, 1024, picaOptions.destTileBorder, picaOptions.filter, picaOptions.unsharpAmount, picaOptions.unsharpRadius, picaOptions.unsharpThreshold);
   const resizedImageBitmap = result.transferToImageBitmap();
   return resizedImageBitmap;
 }
@@ -963,21 +950,21 @@ var require_glur = __commonJS((exports, module) => {
 // src/worker/pica/client/createStages.ts
 var MIN_INNER_TILE_SIZE = 2;
 function createStages(fromWidth, fromHeight, toWidth, toHeight, srcTileSize, destTileBorder) {
-  let scaleX = toWidth / fromWidth;
-  let scaleY = toHeight / fromHeight;
-  let minScale = (2 * destTileBorder + MIN_INNER_TILE_SIZE + 1) / srcTileSize;
+  const scaleX = toWidth / fromWidth;
+  const scaleY = toHeight / fromHeight;
+  const minScale = (2 * destTileBorder + MIN_INNER_TILE_SIZE + 1) / srcTileSize;
   if (minScale > 0.5)
     return [[toWidth, toHeight]];
-  let stageCount = Math.ceil(Math.log(Math.min(scaleX, scaleY)) / Math.log(minScale));
+  const stageCount = Math.ceil(Math.log(Math.min(scaleX, scaleY)) / Math.log(minScale));
   if (stageCount <= 1)
     return [[toWidth, toHeight]];
-  let result = [];
+  const stages = [];
   for (let i = 0;i < stageCount; i++) {
-    let width = Math.round(Math.pow(Math.pow(fromWidth, stageCount - i - 1) * Math.pow(toWidth, i + 1), 1 / stageCount));
-    let height = Math.round(Math.pow(Math.pow(fromHeight, stageCount - i - 1) * Math.pow(toHeight, i + 1), 1 / stageCount));
-    result.push([width, height]);
+    const width = Math.round(Math.pow(Math.pow(fromWidth, stageCount - i - 1) * Math.pow(toWidth, i + 1), 1 / stageCount));
+    const height = Math.round(Math.pow(Math.pow(fromHeight, stageCount - i - 1) * Math.pow(toHeight, i + 1), 1 / stageCount));
+    stages.push([width, height]);
   }
-  return result;
+  return stages;
 }
 
 // src/worker/pica/client/extractTileData.ts
@@ -1007,37 +994,32 @@ function pixelCeil(x) {
     return nearest;
   return Math.ceil(x);
 }
-function createTiles(options) {
-  let scaleX = options.toWidth / options.width;
-  let scaleY = options.toHeight / options.height;
-  let innerTileWidth = pixelFloor(options.srcTileSize * scaleX) - 2 * options.destTileBorder;
-  let innerTileHeight = pixelFloor(options.srcTileSize * scaleY) - 2 * options.destTileBorder;
+function createTiles(width, height, srcTileSize, toWidth, toHeight, destTileBorder) {
+  const scaleX = toWidth / width;
+  const scaleY = toHeight / height;
+  const innerTileWidth = pixelFloor(srcTileSize * scaleX) - 2 * destTileBorder;
+  const innerTileHeight = pixelFloor(srcTileSize * scaleY) - 2 * destTileBorder;
   if (innerTileWidth < 1 || innerTileHeight < 1) {
     throw new Error("Internal error in pica: target tile width/height is too small.");
   }
   let x, y;
   let innerX, innerY, toTileWidth, toTileHeight;
-  let tiles = [];
-  let tile;
-  for (innerY = 0;innerY < options.toHeight; innerY += innerTileHeight) {
-    for (innerX = 0;innerX < options.toWidth; innerX += innerTileWidth) {
-      x = innerX - options.destTileBorder;
-      if (x < 0) {
+  const tiles = [];
+  for (innerY = 0;innerY < toHeight; innerY += innerTileHeight) {
+    for (innerX = 0;innerX < toWidth; innerX += innerTileWidth) {
+      x = innerX - destTileBorder;
+      if (x < 0)
         x = 0;
-      }
-      toTileWidth = innerX + innerTileWidth + options.destTileBorder - x;
-      if (x + toTileWidth >= options.toWidth) {
-        toTileWidth = options.toWidth - x;
-      }
-      y = innerY - options.destTileBorder;
-      if (y < 0) {
+      toTileWidth = innerX + innerTileWidth + destTileBorder - x;
+      if (x + toTileWidth >= toWidth)
+        toTileWidth = toWidth - x;
+      y = innerY - destTileBorder;
+      if (y < 0)
         y = 0;
-      }
-      toTileHeight = innerY + innerTileHeight + options.destTileBorder - y;
-      if (y + toTileHeight >= options.toHeight) {
-        toTileHeight = options.toHeight - y;
-      }
-      tile = {
+      toTileHeight = innerY + innerTileHeight + destTileBorder - y;
+      if (y + toTileHeight >= toHeight)
+        toTileHeight = toHeight - y;
+      tiles.push({
         toX: x,
         toY: y,
         toWidth: toTileWidth,
@@ -1054,8 +1036,7 @@ function createTiles(options) {
         y: pixelFloor(y / scaleY),
         width: pixelCeil(toTileWidth / scaleX),
         height: pixelCeil(toTileHeight / scaleY)
-      };
-      tiles.push(tile);
+      });
     }
   }
   return tiles;
@@ -1466,7 +1447,7 @@ function isImageBitmap(element) {
 }
 
 // src/worker/pica/client/tileAndResize.ts
-var processTile = (tile, from, picaOptions, stageEnv) => {
+var processTile = (tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, stageEnv) => {
   let tileOptions = {
     width: tile.width,
     height: tile.height,
@@ -1476,14 +1457,14 @@ var processTile = (tile, from, picaOptions, stageEnv) => {
     scaleY: tile.scaleY,
     offsetX: tile.offsetX,
     offsetY: tile.offsetY,
-    filter: picaOptions.filter,
-    unsharpAmount: picaOptions.unsharpAmount,
-    unsharpRadius: picaOptions.unsharpRadius,
-    unsharpThreshold: picaOptions.unsharpThreshold
+    filter,
+    unsharpAmount,
+    unsharpRadius,
+    unsharpThreshold
   };
   return Promise.resolve(tileOptions).then((tileOptions2) => extractTileData(tile, from, null, stageEnv, tileOptions2)).then((tileOptions2) => invokeResize(tileOptions2)).then((result) => landTileData(tile, result, stageEnv));
 };
-function tileAndResize(from, to, picaOptions) {
+function tileAndResize(from, to, width, height, toWidth, toHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
   let stageEnv = {
     srcCtx: null,
     srcImageBitmap: null,
@@ -1501,15 +1482,8 @@ function tileAndResize(from, to, picaOptions) {
     }
     throw new Error('Pica: ".from" should be Image, Canvas or ImageBitmap');
   }).then(() => {
-    let tiles = createTiles({
-      width: picaOptions.width,
-      height: picaOptions.height,
-      srcTileSize: 1024,
-      toWidth: picaOptions.toWidth,
-      toHeight: picaOptions.toHeight,
-      destTileBorder: picaOptions.destTileBorder
-    });
-    let jobs = tiles.map((tile) => processTile(tile, from, picaOptions, stageEnv));
+    const tiles = createTiles(width, height, srcTileSize, toWidth, toHeight, destTileBorder);
+    const jobs = tiles.map((tile) => processTile(tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, stageEnv));
     function cleanup(stageEnv2) {
       if (stageEnv2.srcImageBitmap) {
         if (!stageEnv2.isImageBitmapReused)
@@ -1528,24 +1502,24 @@ function tileAndResize(from, to, picaOptions) {
 }
 
 // src/worker/pica/client/processStages.ts
-async function processStages(stages, from, to, picaOptions) {
-  let [toWidth, toHeight] = stages.shift();
+async function processStages(stages, from, to, currentWidth, currentHeight, currentToWidth, currentToHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
+  const stage = stages.shift();
+  if (!stage)
+    throw new Error("Pica: Stages are empty");
+  const [toWidth, toHeight] = stage;
   let isLastStage = stages.length === 0;
-  picaOptions.toWidth = toWidth;
-  picaOptions.toHeight = toHeight;
+  currentToWidth = toWidth;
+  currentToHeight = toHeight;
   let tempCanvas;
   if (!isLastStage) {
     tempCanvas = new OffscreenCanvas(toWidth, toHeight);
   }
-  await tileAndResize(from, isLastStage ? to : tempCanvas, picaOptions);
+  await tileAndResize(from, isLastStage ? to : tempCanvas, currentWidth, currentHeight, currentToWidth, currentToHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
   if (isLastStage)
     return to;
-  picaOptions.width = toWidth;
-  picaOptions.height = toHeight;
-  const result = await processStages(stages, from, tempCanvas, picaOptions);
-  if (tempCanvas) {
-    tempCanvas.width = tempCanvas.height = 0;
-  }
+  currentWidth = toWidth;
+  currentHeight = toHeight;
+  const result = await processStages(stages, tempCanvas, to, currentWidth, currentHeight, currentToWidth, currentToHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
   return result;
 }
 
@@ -1579,7 +1553,7 @@ async function resize2(blob, options) {
     toHeight,
     destTileBorder
   };
-  const result = await processStages(stages, imageBitmap, offscreenCanvas, picaOptions);
+  const result = await processStages(stages, imageBitmap, offscreenCanvas, picaOptions.width, picaOptions.height, picaOptions.toWidth, picaOptions.toHeight, 1024, picaOptions.destTileBorder, picaOptions.filter, picaOptions.unsharpAmount, picaOptions.unsharpRadius, picaOptions.unsharpThreshold);
   const resizedImageBitmap = result.transferToImageBitmap();
   return resizedImageBitmap;
 }

@@ -1,4 +1,4 @@
-import { PicaOptions, PicaTile, PicaTileOptions, StageEnv } from '../../..'
+import { Filter, PicaTile, PicaTileOptions, StageEnv } from '../../..'
 import { extractTileData } from './extractTileData'
 import { createTiles } from './createTiles'
 import { invokeResize } from './invokeResize'
@@ -8,22 +8,25 @@ import * as utils from './utils'
 const processTile = (
   tile: PicaTile,
   from: ImageBitmap | OffscreenCanvas,
-  picaOptions: PicaOptions,
+  filter: Filter,
+  unsharpAmount: number,
+  unsharpRadius: number,
+  unsharpThreshold: number,
   stageEnv: StageEnv
 ) => {
   let tileOptions: PicaTileOptions = {
-    width:            tile.width,
-    height:           tile.height,
-    toWidth:          tile.toWidth,
-    toHeight:         tile.toHeight,
-    scaleX:           tile.scaleX,
-    scaleY:           tile.scaleY,
-    offsetX:          tile.offsetX,
-    offsetY:          tile.offsetY,
-    filter:           picaOptions.filter,
-    unsharpAmount:    picaOptions.unsharpAmount,
-    unsharpRadius:    picaOptions.unsharpRadius,
-    unsharpThreshold: picaOptions.unsharpThreshold,
+    width: tile.width,
+    height: tile.height,
+    toWidth: tile.toWidth,
+    toHeight: tile.toHeight,
+    scaleX: tile.scaleX,
+    scaleY: tile.scaleY,
+    offsetX: tile.offsetX,
+    offsetY: tile.offsetY,
+    filter,
+    unsharpAmount,
+    unsharpRadius,
+    unsharpThreshold,
   }
 
   return Promise.resolve(tileOptions)
@@ -36,7 +39,16 @@ const processTile = (
 export function tileAndResize(
   from: ImageBitmap | OffscreenCanvas,
   to: ImageBitmap | OffscreenCanvas,
-  picaOptions: PicaOptions,
+  width: number,
+  height: number,
+  toWidth: number,
+  toHeight: number,
+  srcTileSize: number,
+  destTileBorder: number,
+  filter: Filter,
+  unsharpAmount: number,
+  unsharpRadius: number,
+  unsharpThreshold: number,
 ) {
   let stageEnv: StageEnv = {
     srcCtx: null,
@@ -66,16 +78,24 @@ export function tileAndResize(
     // follow to tiling
     //
 
-    let tiles = createTiles({
-      width:          picaOptions.width,
-      height:         picaOptions.height,
-      srcTileSize:    1024,
-      toWidth:        picaOptions.toWidth,
-      toHeight:       picaOptions.toHeight,
-      destTileBorder: picaOptions.destTileBorder,
-    })
+    const tiles = createTiles(
+      width,
+      height,
+      srcTileSize,
+      toWidth,
+      toHeight,
+      destTileBorder,
+    )
 
-    let jobs = tiles.map(tile => processTile(tile, from, picaOptions, stageEnv))
+    const jobs = tiles.map(tile => processTile(
+      tile,
+      from,
+      filter,
+      unsharpAmount,
+      unsharpRadius,
+      unsharpThreshold,
+      stageEnv,
+    ))
 
     function cleanup(stageEnv: StageEnv) {
       if (stageEnv.srcImageBitmap) {

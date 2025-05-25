@@ -1852,7 +1852,6 @@ module.exports = function (fn, options) {
     var URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
 
     var blob = new Blob([src], { type: 'text/javascript' });
-    // console.log(src)
     if (options && options.bare) { return blob; }
     var workerUrl = URL.createObjectURL(blob);
     // var worker = new Worker(workerUrl);
@@ -2209,6 +2208,7 @@ Pica.prototype.__landTileData = function (tile, result, stageEnv) {
 };
 
 Pica.prototype.__tileAndResize = function (from, to, opts) {
+  console.log(to.width, to.height);
   var _this3 = this;
 
   var stageEnv = {

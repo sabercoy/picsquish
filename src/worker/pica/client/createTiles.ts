@@ -1,4 +1,4 @@
-import { PicaBaseOptions } from '../../..'
+import { PicaTile } from '../../..'
 
 const PIXEL_EPSILON = 1e-5
 
@@ -18,12 +18,19 @@ function pixelCeil(x: number) {
   return Math.ceil(x)
 }
 
-export function createTiles(options: PicaBaseOptions & { srcTileSize: number }) {
-  let scaleX = options.toWidth / options.width
-  let scaleY = options.toHeight / options.height
+export function createTiles(
+  width: number,
+  height: number,
+  srcTileSize: number,
+  toWidth: number,
+  toHeight: number,
+  destTileBorder: number,
+) {
+  const scaleX = toWidth / width
+  const scaleY = toHeight / height
 
-  let innerTileWidth = pixelFloor(options.srcTileSize * scaleX) - 2 * options.destTileBorder
-  let innerTileHeight = pixelFloor(options.srcTileSize * scaleY) - 2 * options.destTileBorder
+  const innerTileWidth = pixelFloor(srcTileSize * scaleX) - 2 * destTileBorder
+  const innerTileHeight = pixelFloor(srcTileSize * scaleY) - 2 * destTileBorder
 
   // prevent infinite loop, this should never happen
   if (innerTileWidth < 1 || innerTileHeight < 1) {
@@ -32,28 +39,23 @@ export function createTiles(options: PicaBaseOptions & { srcTileSize: number }) 
 
   let x, y
   let innerX, innerY, toTileWidth, toTileHeight
-  let tiles = []
-  let tile
+  const tiles: PicaTile[] = []
 
   // we go top-to-down instead of left-to-right to make image displayed from top to
   // doesn in the browser
-  for (innerY = 0; innerY < options.toHeight; innerY += innerTileHeight) {
-    for (innerX = 0; innerX < options.toWidth; innerX += innerTileWidth) {
-      x = innerX - options.destTileBorder
-      if (x < 0) { x = 0 }
-      toTileWidth = innerX + innerTileWidth + options.destTileBorder - x
-      if (x + toTileWidth >= options.toWidth) {
-        toTileWidth = options.toWidth - x
-      }
+  for (innerY = 0; innerY < toHeight; innerY += innerTileHeight) {
+    for (innerX = 0; innerX < toWidth; innerX += innerTileWidth) {
+      x = innerX - destTileBorder
+      if (x < 0) x = 0
+      toTileWidth = innerX + innerTileWidth + destTileBorder - x
+      if (x + toTileWidth >= toWidth) toTileWidth = toWidth - x
 
-      y = innerY - options.destTileBorder;
-      if (y < 0) { y = 0; }
-      toTileHeight = innerY + innerTileHeight + options.destTileBorder - y
-      if (y + toTileHeight >= options.toHeight) {
-        toTileHeight = options.toHeight - y
-      }
+      y = innerY - destTileBorder
+      if (y < 0) y = 0
+      toTileHeight = innerY + innerTileHeight + destTileBorder - y
+      if (y + toTileHeight >= toHeight) toTileHeight = toHeight - y
 
-      tile = {
+      tiles.push({
         toX: x,
         toY: y,
         toWidth: toTileWidth,
@@ -73,9 +75,7 @@ export function createTiles(options: PicaBaseOptions & { srcTileSize: number }) 
         y: pixelFloor(y / scaleY),
         width: pixelCeil(toTileWidth / scaleX),
         height: pixelCeil(toTileHeight / scaleY),
-      }
-
-      tiles.push(tile)
+      })
     }
   }
 

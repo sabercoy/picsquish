@@ -59,4 +59,5 @@ export type StageEnv = {
     isImageBitmapReused: boolean;
     toCtx: OffscreenCanvasRenderingContext2D | null;
 };
+export type ResizeStage = [number, number];
 export declare function resize(blob: Blob, options: Options): Promise<ImageBitmap>;

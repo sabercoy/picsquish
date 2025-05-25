@@ -2357,6 +2357,21 @@ Pica.prototype.__processStages = function (stages, from, to, opts) {
     tmpCanvas = this.options.createCanvas(toWidth, toHeight);
   }
 
+  console.log('--------------------')
+  console.log('from', from)
+  console.log('to', isLastStage ? to : tmpCanvas)
+  console.log('currentWidth', opts.width)
+  console.log('currentHeight', opts.height)
+  console.log('currentToWidth', opts.toWidth)
+  console.log('currentToHeight', opts.toHeight)
+  console.log('srcTileSize', opts.srcTileSize)
+  console.log('destTileBorder', opts.destTileBorder)
+  console.log('filter', opts.filter)
+  console.log('unsharpAmount', opts.unsharpAmount)
+  console.log('unsharpRadius', opts.unsharpRadius)
+  console.log('unsharpThreshold', opts.unsharpThreshold)
+  console.log('--------------------')
+
   return this.__tileAndResize(from, isLastStage ? to : tmpCanvas, opts).then(function () {
     if (isLastStage) return to;
     opts.width = toWidth;
@@ -2366,7 +2381,7 @@ Pica.prototype.__processStages = function (stages, from, to, opts) {
     if (tmpCanvas) {
       // Safari 12 workaround
       // https://github.com/nodeca/pica/issues/199
-      tmpCanvas.width = tmpCanvas.height = 0;
+      //tmpCanvas.width = tmpCanvas.height = 0;
     }
 
     return res;

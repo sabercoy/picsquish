@@ -173,30 +173,28 @@ function createStages(fromWidth, fromHeight, toWidth, toHeight, srcTileSize, des
   const scaleY = toHeight / fromHeight;
   const minScale = (2 * destTileBorder + MIN_INNER_TILE_SIZE + 1) / srcTileSize;
   if (minScale > 0.5)
-    return [[toWidth, toHeight]];
+    return [{ toWidth, toHeight }];
   const stageCount = Math.ceil(Math.log(Math.min(scaleX, scaleY)) / Math.log(minScale));
   if (stageCount <= 1)
-    return [[toWidth, toHeight]];
+    return [{ toWidth, toHeight }];
   const stages = [];
   for (let i = 0;i < stageCount; i++) {
     const width = Math.round(Math.pow(Math.pow(fromWidth, stageCount - i - 1) * Math.pow(toWidth, i + 1), 1 / stageCount));
     const height = Math.round(Math.pow(Math.pow(fromHeight, stageCount - i - 1) * Math.pow(toHeight, i + 1), 1 / stageCount));
-    stages.push([width, height]);
+    stages.push({ toWidth: width, toHeight: height });
   }
   return stages;
 }
 
-// src/worker/pica/client/extractTileData.ts
-function extractTileData(tile, from, opts, stageEnv, extractTo) {
-  const tmpCanvas = new OffscreenCanvas(tile.width, tile.height);
-  const tmpCtx = tmpCanvas.getContext("2d");
-  if (!tmpCtx)
+// src/worker/pica/client/extractTile.ts
+function extractTile(tileData, from) {
+  const tileCanvas = new OffscreenCanvas(tileData.width, tileData.height);
+  const tileContext = tileCanvas.getContext("2d");
+  if (!tileContext)
     throw new Error("Pica: Canvas context is not supported");
-  tmpCtx.globalCompositeOperation = "copy";
-  tmpCtx.drawImage(stageEnv.srcImageBitmap || from, tile.x, tile.y, tile.width, tile.height, 0, 0, tile.width, tile.height);
-  extractTo.src = tmpCtx.getImageData(0, 0, tile.width, tile.height).data;
-  tmpCanvas.width = tmpCanvas.height = 0;
-  return extractTo;
+  tileContext.globalCompositeOperation = "copy";
+  tileContext.drawImage(from, tileData.x, tileData.y, tileData.width, tileData.height, 0, 0, tileData.width, tileData.height);
+  return tileContext.getImageData(0, 0, tileData.width, tileData.height).data;
 }
 
 // src/worker/pica/client/createTiles.ts
@@ -259,6 +257,17 @@ function createTiles(width, height, srcTileSize, toWidth, toHeight, destTileBord
     }
   }
   return tiles;
+}
+
+// src/worker/pica/client/landTile.ts
+function landTile(tileData, resizedTile, toContext) {
+  const toImageData = new ImageData(new Uint8ClampedArray(resizedTile), tileData.toWidth, tileData.toHeight);
+  const NEED_SAFARI_FIX = false;
+  if (NEED_SAFARI_FIX) {
+    toContext.putImageData(toImageData, tileData.toX, tileData.toY, tileData.toInnerX - tileData.toX, tileData.toInnerY - tileData.toY, tileData.toInnerWidth + 0.00001, tileData.toInnerHeight + 0.00001);
+  } else {
+    toContext.putImageData(toImageData, tileData.toX, tileData.toY, tileData.toInnerX - tileData.toX, tileData.toInnerY - tileData.toY, tileData.toInnerWidth, tileData.toInnerHeight);
+  }
 }
 
 // src/worker/pica/worker/mm_resize/resize_filter_info.ts
@@ -548,36 +557,26 @@ function hasAlpha(src, width, height) {
   }
   return false;
 }
-function resetAlpha(dst, width, height) {
+function resetAlpha(dest, width, height) {
   let ptr = 3;
   let len = width * height * 4 | 0;
   while (ptr < len) {
-    dst[ptr] = 255;
+    dest[ptr] = 255;
     ptr = ptr + 4 | 0;
   }
 }
-function resize(picaTileOptions) {
-  const src = picaTileOptions.src;
-  const srcW = picaTileOptions.width;
-  const srcH = picaTileOptions.height;
-  const destW = picaTileOptions.toWidth;
-  const destH = picaTileOptions.toHeight;
-  const scaleX = picaTileOptions.scaleX || picaTileOptions.toWidth / picaTileOptions.width;
-  const scaleY = picaTileOptions.scaleY || picaTileOptions.toHeight / picaTileOptions.height;
-  const offsetX = picaTileOptions.offsetX || 0;
-  const offsetY = picaTileOptions.offsetY || 0;
-  const dest = picaTileOptions.dest || new Uint8Array(destW * destH * 4);
-  const filter = typeof picaTileOptions.filter === "undefined" ? "mks2013" : picaTileOptions.filter;
-  const filtersX = resizeFilterGen(filter, srcW, destW, scaleX, offsetX);
-  const filtersY = resizeFilterGen(filter, srcH, destH, scaleY, offsetY);
-  const tmp = new Uint16Array(destW * srcH * 4);
-  if (hasAlpha(src, srcW, srcH)) {
-    convolveHorWithPre(src, tmp, srcW, srcH, destW, filtersX);
-    convolveVertWithPre(tmp, dest, srcH, destW, destH, filtersY);
+function resize(filter, tileImageData, tileWidth, tileHeight, tileToWidth, tileToHeight, tileScaleX, tileScaleY, tileOffsetX, tileOffsetY) {
+  const filtersX = resizeFilterGen(filter, tileWidth, tileToWidth, tileScaleX, tileOffsetX);
+  const filtersY = resizeFilterGen(filter, tileHeight, tileToHeight, tileScaleY, tileOffsetY);
+  const dest = new Uint8Array(tileToWidth * tileToHeight * 4);
+  const temp = new Uint16Array(tileToWidth * tileHeight * 4);
+  if (hasAlpha(tileImageData, tileWidth, tileHeight)) {
+    convolveHorWithPre(tileImageData, temp, tileWidth, tileHeight, tileToWidth, filtersX);
+    convolveVertWithPre(temp, dest, tileHeight, tileToWidth, tileToHeight, filtersY);
   } else {
-    convolveHor(src, tmp, srcW, srcH, destW, filtersX);
-    convolveVert(tmp, dest, srcH, destW, destH, filtersY);
-    resetAlpha(dest, destW, destH);
+    convolveHor(tileImageData, temp, tileWidth, tileHeight, tileToWidth, filtersX);
+    convolveVert(temp, dest, tileHeight, tileToWidth, tileToHeight, filtersY);
+    resetAlpha(dest, tileToWidth, tileToHeight);
   }
   return dest;
 }
@@ -630,116 +629,42 @@ function unsharp(img, width, height, amount, radius, threshold) {
 }
 
 // src/worker/pica/worker/resizeAndUnsharp.ts
-function resizeAndUnsharp(picaTileOptions) {
-  let result = resize(picaTileOptions);
-  if (picaTileOptions.unsharpAmount)
-    unsharp(result, picaTileOptions.toWidth, picaTileOptions.toHeight, picaTileOptions.unsharpAmount, picaTileOptions.unsharpRadius, picaTileOptions.unsharpThreshold);
-  return result;
-}
-
-// src/worker/pica/client/invokeResize.ts
-function invokeResize(tileOpts) {
-  return Promise.resolve().then(() => {
-    return { data: resizeAndUnsharp(tileOpts) };
-  });
-}
-
-// src/worker/pica/client/landTileData.ts
-function landTileData(tile, result, stageEnv) {
-  let toImageData;
-  toImageData = new ImageData(new Uint8ClampedArray(result.data), tile.toWidth, tile.toHeight);
-  const NEED_SAFARI_FIX = false;
-  if (NEED_SAFARI_FIX) {
-    stageEnv.toCtx?.putImageData(toImageData, tile.toX, tile.toY, tile.toInnerX - tile.toX, tile.toInnerY - tile.toY, tile.toInnerWidth + 0.00001, tile.toInnerHeight + 0.00001);
-  } else {
-    stageEnv.toCtx?.putImageData(toImageData, tile.toX, tile.toY, tile.toInnerX - tile.toX, tile.toInnerY - tile.toY, tile.toInnerWidth, tile.toInnerHeight);
-  }
-  return null;
-}
-
-// src/worker/pica/client/utils.ts
-function isCanvas(element) {
-  return element instanceof OffscreenCanvas;
-}
-function isImageBitmap(element) {
-  return element instanceof ImageBitmap;
+function resizeAndUnsharp(filter, tile, tileWidth, tileHeight, tileToWidth, tileToHeight, tileScaleX, tileScaleY, tileOffsetX, tileOffsetY, unsharpAmount, unsharpRadius, unsharpThreshold) {
+  const resizedTile = resize(filter, tile, tileWidth, tileHeight, tileToWidth, tileToHeight, tileScaleX, tileScaleY, tileOffsetX, tileOffsetY);
+  if (unsharpAmount)
+    unsharp(resizedTile, tileToWidth, tileToHeight, unsharpAmount, unsharpRadius, unsharpThreshold);
+  return resizedTile;
 }
 
 // src/worker/pica/client/tileAndResize.ts
-var processTile = (tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, stageEnv) => {
-  let tileOptions = {
-    width: tile.width,
-    height: tile.height,
-    toWidth: tile.toWidth,
-    toHeight: tile.toHeight,
-    scaleX: tile.scaleX,
-    scaleY: tile.scaleY,
-    offsetX: tile.offsetX,
-    offsetY: tile.offsetY,
-    filter,
-    unsharpAmount,
-    unsharpRadius,
-    unsharpThreshold
-  };
-  return Promise.resolve(tileOptions).then((tileOptions2) => extractTileData(tile, from, null, stageEnv, tileOptions2)).then((tileOptions2) => invokeResize(tileOptions2)).then((result) => landTileData(tile, result, stageEnv));
+var processTile = (tileData, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, toContext) => {
+  const tile = extractTile(tileData, from);
+  const resizedTile = resizeAndUnsharp(filter, tile, tileData.width, tileData.height, tileData.toWidth, tileData.toHeight, tileData.scaleX, tileData.scaleY, tileData.offsetX, tileData.offsetY, unsharpAmount, unsharpRadius, unsharpThreshold);
+  landTile(tileData, resizedTile, toContext);
 };
-function tileAndResize(from, to, width, height, toWidth, toHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
-  let stageEnv = {
-    srcCtx: null,
-    srcImageBitmap: null,
-    isImageBitmapReused: false,
-    toCtx: null
-  };
-  return Promise.resolve().then(() => {
-    stageEnv.toCtx = to.getContext("2d");
-    if (isCanvas(from))
-      return null;
-    if (isImageBitmap(from)) {
-      stageEnv.srcImageBitmap = from;
-      stageEnv.isImageBitmapReused = true;
-      return null;
-    }
-    throw new Error('Pica: ".from" should be Image, Canvas or ImageBitmap');
-  }).then(() => {
-    const tiles = createTiles(width, height, srcTileSize, toWidth, toHeight, destTileBorder);
-    const jobs = tiles.map((tile) => processTile(tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, stageEnv));
-    function cleanup(stageEnv2) {
-      if (stageEnv2.srcImageBitmap) {
-        if (!stageEnv2.isImageBitmapReused)
-          stageEnv2.srcImageBitmap.close();
-        stageEnv2.srcImageBitmap = null;
-      }
-    }
-    return Promise.all(jobs).then(() => {
-      cleanup(stageEnv);
-      return to;
-    }, (err) => {
-      cleanup(stageEnv);
-      throw err;
-    });
-  });
+async function tileAndResize(from, to, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
+  const toContext = to.getContext("2d");
+  if (!toContext)
+    throw new Error("Pica: Canvas context is not supported");
+  const tiles = createTiles(from.width, from.height, srcTileSize, to.width, to.height, destTileBorder);
+  for (const tile of tiles) {
+    processTile(tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, toContext);
+  }
 }
 
 // src/worker/pica/client/processStages.ts
-async function processStages(stages, from, to, currentWidth, currentHeight, currentToWidth, currentToHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
-  const stage = stages.shift();
-  if (!stage)
-    throw new Error("Pica: Stages are empty");
-  const [toWidth, toHeight] = stage;
-  let isLastStage = stages.length === 0;
-  currentToWidth = toWidth;
-  currentToHeight = toHeight;
-  let tempCanvas;
-  if (!isLastStage) {
-    tempCanvas = new OffscreenCanvas(toWidth, toHeight);
+async function processStages(stages, original, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
+  let from = original;
+  let to = new OffscreenCanvas(stages[0].toWidth, stages[0].toHeight);
+  for (let i = 0;i < stages.length; i++) {
+    await tileAndResize(from, to, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
+    const nextStage = stages[i + 1];
+    if (!nextStage)
+      break;
+    from = to;
+    to = new OffscreenCanvas(nextStage.toWidth, nextStage.toHeight);
   }
-  await tileAndResize(from, isLastStage ? to : tempCanvas, currentWidth, currentHeight, currentToWidth, currentToHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
-  if (isLastStage)
-    return to;
-  currentWidth = toWidth;
-  currentHeight = toHeight;
-  const result = await processStages(stages, tempCanvas, to, currentWidth, currentHeight, currentToWidth, currentToHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
-  return result;
+  return to;
 }
 
 // src/index.ts
@@ -757,7 +682,6 @@ async function resize2(blob, options) {
   const scaleFactor = Math.min(widthRatio, heightRatio, 1);
   const toWidth = Math.floor(originalWidth * scaleFactor);
   const toHeight = Math.floor(originalHeight * scaleFactor);
-  const offscreenCanvas = new OffscreenCanvas(toWidth, toHeight);
   const DEST_TILE_BORDER = 3;
   const destTileBorder = Math.ceil(Math.max(DEST_TILE_BORDER, 2.5 * unsharpRadius | 0));
   const stages = createStages(originalWidth, originalHeight, toWidth, toHeight, tileSize, destTileBorder);
@@ -772,9 +696,8 @@ async function resize2(blob, options) {
     toHeight,
     destTileBorder
   };
-  const result = await processStages(stages, imageBitmap, offscreenCanvas, picaOptions.width, picaOptions.height, picaOptions.toWidth, picaOptions.toHeight, 1024, picaOptions.destTileBorder, picaOptions.filter, picaOptions.unsharpAmount, picaOptions.unsharpRadius, picaOptions.unsharpThreshold);
-  const resizedImageBitmap = result.transferToImageBitmap();
-  return resizedImageBitmap;
+  const result = await processStages(stages, imageBitmap, 1024, picaOptions.destTileBorder, picaOptions.filter, picaOptions.unsharpAmount, picaOptions.unsharpRadius, picaOptions.unsharpThreshold);
+  return result.transferToImageBitmap();
 }
 
 // src/client/task-queue.ts
@@ -954,30 +877,28 @@ function createStages(fromWidth, fromHeight, toWidth, toHeight, srcTileSize, des
   const scaleY = toHeight / fromHeight;
   const minScale = (2 * destTileBorder + MIN_INNER_TILE_SIZE + 1) / srcTileSize;
   if (minScale > 0.5)
-    return [[toWidth, toHeight]];
+    return [{ toWidth, toHeight }];
   const stageCount = Math.ceil(Math.log(Math.min(scaleX, scaleY)) / Math.log(minScale));
   if (stageCount <= 1)
-    return [[toWidth, toHeight]];
+    return [{ toWidth, toHeight }];
   const stages = [];
   for (let i = 0;i < stageCount; i++) {
     const width = Math.round(Math.pow(Math.pow(fromWidth, stageCount - i - 1) * Math.pow(toWidth, i + 1), 1 / stageCount));
     const height = Math.round(Math.pow(Math.pow(fromHeight, stageCount - i - 1) * Math.pow(toHeight, i + 1), 1 / stageCount));
-    stages.push([width, height]);
+    stages.push({ toWidth: width, toHeight: height });
   }
   return stages;
 }
 
-// src/worker/pica/client/extractTileData.ts
-function extractTileData(tile, from, opts, stageEnv, extractTo) {
-  const tmpCanvas = new OffscreenCanvas(tile.width, tile.height);
-  const tmpCtx = tmpCanvas.getContext("2d");
-  if (!tmpCtx)
+// src/worker/pica/client/extractTile.ts
+function extractTile(tileData, from) {
+  const tileCanvas = new OffscreenCanvas(tileData.width, tileData.height);
+  const tileContext = tileCanvas.getContext("2d");
+  if (!tileContext)
     throw new Error("Pica: Canvas context is not supported");
-  tmpCtx.globalCompositeOperation = "copy";
-  tmpCtx.drawImage(stageEnv.srcImageBitmap || from, tile.x, tile.y, tile.width, tile.height, 0, 0, tile.width, tile.height);
-  extractTo.src = tmpCtx.getImageData(0, 0, tile.width, tile.height).data;
-  tmpCanvas.width = tmpCanvas.height = 0;
-  return extractTo;
+  tileContext.globalCompositeOperation = "copy";
+  tileContext.drawImage(from, tileData.x, tileData.y, tileData.width, tileData.height, 0, 0, tileData.width, tileData.height);
+  return tileContext.getImageData(0, 0, tileData.width, tileData.height).data;
 }
 
 // src/worker/pica/client/createTiles.ts
@@ -1040,6 +961,17 @@ function createTiles(width, height, srcTileSize, toWidth, toHeight, destTileBord
     }
   }
   return tiles;
+}
+
+// src/worker/pica/client/landTile.ts
+function landTile(tileData, resizedTile, toContext) {
+  const toImageData = new ImageData(new Uint8ClampedArray(resizedTile), tileData.toWidth, tileData.toHeight);
+  const NEED_SAFARI_FIX = false;
+  if (NEED_SAFARI_FIX) {
+    toContext.putImageData(toImageData, tileData.toX, tileData.toY, tileData.toInnerX - tileData.toX, tileData.toInnerY - tileData.toY, tileData.toInnerWidth + 0.00001, tileData.toInnerHeight + 0.00001);
+  } else {
+    toContext.putImageData(toImageData, tileData.toX, tileData.toY, tileData.toInnerX - tileData.toX, tileData.toInnerY - tileData.toY, tileData.toInnerWidth, tileData.toInnerHeight);
+  }
 }
 
 // src/worker/pica/worker/mm_resize/resize_filter_info.ts
@@ -1329,36 +1261,26 @@ function hasAlpha(src, width, height) {
   }
   return false;
 }
-function resetAlpha(dst, width, height) {
+function resetAlpha(dest, width, height) {
   let ptr = 3;
   let len = width * height * 4 | 0;
   while (ptr < len) {
-    dst[ptr] = 255;
+    dest[ptr] = 255;
     ptr = ptr + 4 | 0;
   }
 }
-function resize(picaTileOptions) {
-  const src = picaTileOptions.src;
-  const srcW = picaTileOptions.width;
-  const srcH = picaTileOptions.height;
-  const destW = picaTileOptions.toWidth;
-  const destH = picaTileOptions.toHeight;
-  const scaleX = picaTileOptions.scaleX || picaTileOptions.toWidth / picaTileOptions.width;
-  const scaleY = picaTileOptions.scaleY || picaTileOptions.toHeight / picaTileOptions.height;
-  const offsetX = picaTileOptions.offsetX || 0;
-  const offsetY = picaTileOptions.offsetY || 0;
-  const dest = picaTileOptions.dest || new Uint8Array(destW * destH * 4);
-  const filter = typeof picaTileOptions.filter === "undefined" ? "mks2013" : picaTileOptions.filter;
-  const filtersX = resizeFilterGen(filter, srcW, destW, scaleX, offsetX);
-  const filtersY = resizeFilterGen(filter, srcH, destH, scaleY, offsetY);
-  const tmp = new Uint16Array(destW * srcH * 4);
-  if (hasAlpha(src, srcW, srcH)) {
-    convolveHorWithPre(src, tmp, srcW, srcH, destW, filtersX);
-    convolveVertWithPre(tmp, dest, srcH, destW, destH, filtersY);
+function resize(filter, tileImageData, tileWidth, tileHeight, tileToWidth, tileToHeight, tileScaleX, tileScaleY, tileOffsetX, tileOffsetY) {
+  const filtersX = resizeFilterGen(filter, tileWidth, tileToWidth, tileScaleX, tileOffsetX);
+  const filtersY = resizeFilterGen(filter, tileHeight, tileToHeight, tileScaleY, tileOffsetY);
+  const dest = new Uint8Array(tileToWidth * tileToHeight * 4);
+  const temp = new Uint16Array(tileToWidth * tileHeight * 4);
+  if (hasAlpha(tileImageData, tileWidth, tileHeight)) {
+    convolveHorWithPre(tileImageData, temp, tileWidth, tileHeight, tileToWidth, filtersX);
+    convolveVertWithPre(temp, dest, tileHeight, tileToWidth, tileToHeight, filtersY);
   } else {
-    convolveHor(src, tmp, srcW, srcH, destW, filtersX);
-    convolveVert(tmp, dest, srcH, destW, destH, filtersY);
-    resetAlpha(dest, destW, destH);
+    convolveHor(tileImageData, temp, tileWidth, tileHeight, tileToWidth, filtersX);
+    convolveVert(temp, dest, tileHeight, tileToWidth, tileToHeight, filtersY);
+    resetAlpha(dest, tileToWidth, tileToHeight);
   }
   return dest;
 }
@@ -1411,116 +1333,42 @@ function unsharp(img, width, height, amount, radius, threshold) {
 }
 
 // src/worker/pica/worker/resizeAndUnsharp.ts
-function resizeAndUnsharp(picaTileOptions) {
-  let result = resize(picaTileOptions);
-  if (picaTileOptions.unsharpAmount)
-    unsharp(result, picaTileOptions.toWidth, picaTileOptions.toHeight, picaTileOptions.unsharpAmount, picaTileOptions.unsharpRadius, picaTileOptions.unsharpThreshold);
-  return result;
-}
-
-// src/worker/pica/client/invokeResize.ts
-function invokeResize(tileOpts) {
-  return Promise.resolve().then(() => {
-    return { data: resizeAndUnsharp(tileOpts) };
-  });
-}
-
-// src/worker/pica/client/landTileData.ts
-function landTileData(tile, result, stageEnv) {
-  let toImageData;
-  toImageData = new ImageData(new Uint8ClampedArray(result.data), tile.toWidth, tile.toHeight);
-  const NEED_SAFARI_FIX = false;
-  if (NEED_SAFARI_FIX) {
-    stageEnv.toCtx?.putImageData(toImageData, tile.toX, tile.toY, tile.toInnerX - tile.toX, tile.toInnerY - tile.toY, tile.toInnerWidth + 0.00001, tile.toInnerHeight + 0.00001);
-  } else {
-    stageEnv.toCtx?.putImageData(toImageData, tile.toX, tile.toY, tile.toInnerX - tile.toX, tile.toInnerY - tile.toY, tile.toInnerWidth, tile.toInnerHeight);
-  }
-  return null;
-}
-
-// src/worker/pica/client/utils.ts
-function isCanvas(element) {
-  return element instanceof OffscreenCanvas;
-}
-function isImageBitmap(element) {
-  return element instanceof ImageBitmap;
+function resizeAndUnsharp(filter, tile, tileWidth, tileHeight, tileToWidth, tileToHeight, tileScaleX, tileScaleY, tileOffsetX, tileOffsetY, unsharpAmount, unsharpRadius, unsharpThreshold) {
+  const resizedTile = resize(filter, tile, tileWidth, tileHeight, tileToWidth, tileToHeight, tileScaleX, tileScaleY, tileOffsetX, tileOffsetY);
+  if (unsharpAmount)
+    unsharp(resizedTile, tileToWidth, tileToHeight, unsharpAmount, unsharpRadius, unsharpThreshold);
+  return resizedTile;
 }
 
 // src/worker/pica/client/tileAndResize.ts
-var processTile = (tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, stageEnv) => {
-  let tileOptions = {
-    width: tile.width,
-    height: tile.height,
-    toWidth: tile.toWidth,
-    toHeight: tile.toHeight,
-    scaleX: tile.scaleX,
-    scaleY: tile.scaleY,
-    offsetX: tile.offsetX,
-    offsetY: tile.offsetY,
-    filter,
-    unsharpAmount,
-    unsharpRadius,
-    unsharpThreshold
-  };
-  return Promise.resolve(tileOptions).then((tileOptions2) => extractTileData(tile, from, null, stageEnv, tileOptions2)).then((tileOptions2) => invokeResize(tileOptions2)).then((result) => landTileData(tile, result, stageEnv));
+var processTile = (tileData, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, toContext) => {
+  const tile = extractTile(tileData, from);
+  const resizedTile = resizeAndUnsharp(filter, tile, tileData.width, tileData.height, tileData.toWidth, tileData.toHeight, tileData.scaleX, tileData.scaleY, tileData.offsetX, tileData.offsetY, unsharpAmount, unsharpRadius, unsharpThreshold);
+  landTile(tileData, resizedTile, toContext);
 };
-function tileAndResize(from, to, width, height, toWidth, toHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
-  let stageEnv = {
-    srcCtx: null,
-    srcImageBitmap: null,
-    isImageBitmapReused: false,
-    toCtx: null
-  };
-  return Promise.resolve().then(() => {
-    stageEnv.toCtx = to.getContext("2d");
-    if (isCanvas(from))
-      return null;
-    if (isImageBitmap(from)) {
-      stageEnv.srcImageBitmap = from;
-      stageEnv.isImageBitmapReused = true;
-      return null;
-    }
-    throw new Error('Pica: ".from" should be Image, Canvas or ImageBitmap');
-  }).then(() => {
-    const tiles = createTiles(width, height, srcTileSize, toWidth, toHeight, destTileBorder);
-    const jobs = tiles.map((tile) => processTile(tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, stageEnv));
-    function cleanup(stageEnv2) {
-      if (stageEnv2.srcImageBitmap) {
-        if (!stageEnv2.isImageBitmapReused)
-          stageEnv2.srcImageBitmap.close();
-        stageEnv2.srcImageBitmap = null;
-      }
-    }
-    return Promise.all(jobs).then(() => {
-      cleanup(stageEnv);
-      return to;
-    }, (err) => {
-      cleanup(stageEnv);
-      throw err;
-    });
-  });
+async function tileAndResize(from, to, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
+  const toContext = to.getContext("2d");
+  if (!toContext)
+    throw new Error("Pica: Canvas context is not supported");
+  const tiles = createTiles(from.width, from.height, srcTileSize, to.width, to.height, destTileBorder);
+  for (const tile of tiles) {
+    processTile(tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, toContext);
+  }
 }
 
 // src/worker/pica/client/processStages.ts
-async function processStages(stages, from, to, currentWidth, currentHeight, currentToWidth, currentToHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
-  const stage = stages.shift();
-  if (!stage)
-    throw new Error("Pica: Stages are empty");
-  const [toWidth, toHeight] = stage;
-  let isLastStage = stages.length === 0;
-  currentToWidth = toWidth;
-  currentToHeight = toHeight;
-  let tempCanvas;
-  if (!isLastStage) {
-    tempCanvas = new OffscreenCanvas(toWidth, toHeight);
+async function processStages(stages, original, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
+  let from = original;
+  let to = new OffscreenCanvas(stages[0].toWidth, stages[0].toHeight);
+  for (let i = 0;i < stages.length; i++) {
+    await tileAndResize(from, to, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
+    const nextStage = stages[i + 1];
+    if (!nextStage)
+      break;
+    from = to;
+    to = new OffscreenCanvas(nextStage.toWidth, nextStage.toHeight);
   }
-  await tileAndResize(from, isLastStage ? to : tempCanvas, currentWidth, currentHeight, currentToWidth, currentToHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
-  if (isLastStage)
-    return to;
-  currentWidth = toWidth;
-  currentHeight = toHeight;
-  const result = await processStages(stages, tempCanvas, to, currentWidth, currentHeight, currentToWidth, currentToHeight, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
-  return result;
+  return to;
 }
 
 // src/index.ts
@@ -1538,7 +1386,6 @@ async function resize2(blob, options) {
   const scaleFactor = Math.min(widthRatio, heightRatio, 1);
   const toWidth = Math.floor(originalWidth * scaleFactor);
   const toHeight = Math.floor(originalHeight * scaleFactor);
-  const offscreenCanvas = new OffscreenCanvas(toWidth, toHeight);
   const DEST_TILE_BORDER = 3;
   const destTileBorder = Math.ceil(Math.max(DEST_TILE_BORDER, 2.5 * unsharpRadius | 0));
   const stages = createStages(originalWidth, originalHeight, toWidth, toHeight, tileSize, destTileBorder);
@@ -1553,9 +1400,8 @@ async function resize2(blob, options) {
     toHeight,
     destTileBorder
   };
-  const result = await processStages(stages, imageBitmap, offscreenCanvas, picaOptions.width, picaOptions.height, picaOptions.toWidth, picaOptions.toHeight, 1024, picaOptions.destTileBorder, picaOptions.filter, picaOptions.unsharpAmount, picaOptions.unsharpRadius, picaOptions.unsharpThreshold);
-  const resizedImageBitmap = result.transferToImageBitmap();
-  return resizedImageBitmap;
+  const result = await processStages(stages, imageBitmap, 1024, picaOptions.destTileBorder, picaOptions.filter, picaOptions.unsharpAmount, picaOptions.unsharpRadius, picaOptions.unsharpThreshold);
+  return result.transferToImageBitmap();
 }
 
 // src/worker/worker.ts

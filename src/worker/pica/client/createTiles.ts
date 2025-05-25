@@ -1,4 +1,4 @@
-import { PicaTile } from '../../..'
+import { TileData } from '../../..'
 
 const PIXEL_EPSILON = 1e-5
 
@@ -39,7 +39,7 @@ export function createTiles(
 
   let x, y
   let innerX, innerY, toTileWidth, toTileHeight
-  const tiles: PicaTile[] = []
+  const tiles: TileData[] = []
 
   // we go top-to-down instead of left-to-right to make image displayed from top to
   // doesn in the browser

@@ -35,7 +35,7 @@ export type PicaTileOptions = {
     src?: Uint8ClampedArray<ArrayBufferLike>;
     dest?: Uint8Array;
 };
-export type PicaTile = {
+export type TileData = {
     toX: number;
     toY: number;
     toWidth: number;
@@ -59,5 +59,8 @@ export type StageEnv = {
     isImageBitmapReused: boolean;
     toCtx: OffscreenCanvasRenderingContext2D | null;
 };
-export type ResizeStage = [number, number];
+export type ResizeStage = {
+    toWidth: number;
+    toHeight: number;
+};
 export declare function resize(blob: Blob, options: Options): Promise<ImageBitmap>;

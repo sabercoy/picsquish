@@ -1,2 +1,2 @@
 import { Filter, ResizeStage } from '../../..';
-export declare function processStages(stages: ResizeStage[], from: ImageBitmap | OffscreenCanvas, to: ImageBitmap | OffscreenCanvas, currentWidth: number, currentHeight: number, currentToWidth: number, currentToHeight: number, srcTileSize: number, destTileBorder: number, filter: Filter, unsharpAmount: number, unsharpRadius: number, unsharpThreshold: number): Promise<any>;
+export declare function processStages(stages: ResizeStage[], original: ImageBitmap, srcTileSize: number, destTileBorder: number, filter: Filter, unsharpAmount: number, unsharpRadius: number, unsharpThreshold: number): Promise<OffscreenCanvas>;

@@ -34,13 +34,13 @@ export function createStages(
 
   // refuse to scale image multiple times by less than twice each time,
   // it could only happen because of invalid options
-  if (minScale > 0.5) return [[toWidth, toHeight]]
+  if (minScale > 0.5) return [{ toWidth, toHeight }]
 
   const stageCount = Math.ceil(Math.log(Math.min(scaleX, scaleY)) / Math.log(minScale))
 
   // no additional resizes are necessary,
   // stageCount can be zero or be negative when enlarging the image
-  if (stageCount <= 1) return [[toWidth, toHeight]]
+  if (stageCount <= 1) return [{ toWidth, toHeight }]
 
   const stages: ResizeStage[] = []
 
@@ -59,7 +59,7 @@ export function createStages(
       )
     )
 
-    stages.push([width, height])
+    stages.push({ toWidth: width, toHeight: height })
   }
 
   return stages

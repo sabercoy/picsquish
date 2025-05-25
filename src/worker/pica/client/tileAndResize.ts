@@ -1,48 +1,41 @@
-import { Filter, PicaTile, PicaTileOptions, StageEnv } from '../../..'
-import { extractTileData } from './extractTileData'
+import { Filter, TileData } from '../../..'
+import { extractTile } from './extractTile'
 import { createTiles } from './createTiles'
-import { invokeResize } from './invokeResize'
-import { landTileData } from './landTileData'
-import * as utils from './utils'
+import { landTile } from './landTile'
+import { resizeAndUnsharp } from '../worker/resizeAndUnsharp'
 
 const processTile = (
-  tile: PicaTile,
+  tileData: TileData,
   from: ImageBitmap | OffscreenCanvas,
   filter: Filter,
   unsharpAmount: number,
   unsharpRadius: number,
   unsharpThreshold: number,
-  stageEnv: StageEnv
+  toContext: OffscreenCanvasRenderingContext2D,
 ) => {
-  let tileOptions: PicaTileOptions = {
-    width: tile.width,
-    height: tile.height,
-    toWidth: tile.toWidth,
-    toHeight: tile.toHeight,
-    scaleX: tile.scaleX,
-    scaleY: tile.scaleY,
-    offsetX: tile.offsetX,
-    offsetY: tile.offsetY,
+  const tile = extractTile(tileData, from)
+  const resizedTile = resizeAndUnsharp(
     filter,
+    tile,
+    tileData.width,
+    tileData.height,
+    tileData.toWidth,
+    tileData.toHeight,
+    tileData.scaleX,
+    tileData.scaleY,
+    tileData.offsetX,
+    tileData.offsetY,
     unsharpAmount,
     unsharpRadius,
     unsharpThreshold,
-  }
+  )
 
-  return Promise.resolve(tileOptions)
-    .then(tileOptions => extractTileData(tile, from, null, stageEnv, tileOptions))
-    .then(tileOptions => invokeResize(tileOptions))
-    // WEB WORKER WORKS HERE
-    .then(result => landTileData(tile, result, stageEnv))
+  landTile(tileData, resizedTile, toContext)
 }
 
-export function tileAndResize(
+export async function tileAndResize(
   from: ImageBitmap | OffscreenCanvas,
-  to: ImageBitmap | OffscreenCanvas,
-  width: number,
-  height: number,
-  toWidth: number,
-  toHeight: number,
+  to: OffscreenCanvas,
   srcTileSize: number,
   destTileBorder: number,
   filter: Filter,
@@ -50,69 +43,27 @@ export function tileAndResize(
   unsharpRadius: number,
   unsharpThreshold: number,
 ) {
-  let stageEnv: StageEnv = {
-    srcCtx: null,
-    srcImageBitmap: null,
-    isImageBitmapReused: false,
-    toCtx: null,
-  }
+  const toContext = to.getContext('2d')
+  if (!toContext) throw new Error('Pica: Canvas context is not supported')
 
-  // Need to normalize data source first. It can be canvas or image.
-  // If image - try to decode in background if possible
-  return Promise.resolve().then(() => {
-    stageEnv.toCtx = (to as OffscreenCanvas).getContext('2d')
+  const tiles = createTiles(
+    from.width,
+    from.height,
+    srcTileSize,
+    to.width,
+    to.height,
+    destTileBorder,
+  )
 
-    if (utils.isCanvas(from)) return null
-
-    if (utils.isImageBitmap(from)) {
-      stageEnv.srcImageBitmap = from
-      stageEnv.isImageBitmapReused = true
-      return null
-    }
-
-    throw new Error('Pica: ".from" should be Image, Canvas or ImageBitmap')
-  })
-  .then(() => {
-    //
-    // Here we are with "normalized" source,
-    // follow to tiling
-    //
-
-    const tiles = createTiles(
-      width,
-      height,
-      srcTileSize,
-      toWidth,
-      toHeight,
-      destTileBorder,
-    )
-
-    const jobs = tiles.map(tile => processTile(
+  for (const tile of tiles) {
+    processTile(
       tile,
       from,
       filter,
       unsharpAmount,
       unsharpRadius,
       unsharpThreshold,
-      stageEnv,
-    ))
-
-    function cleanup(stageEnv: StageEnv) {
-      if (stageEnv.srcImageBitmap) {
-        if (!stageEnv.isImageBitmapReused) stageEnv.srcImageBitmap.close()
-        stageEnv.srcImageBitmap = null
-      }
-    }
-
-    return Promise.all(jobs).then(
-      () => {
-        cleanup(stageEnv)
-        return to
-      },
-      err => {
-        cleanup(stageEnv)
-        throw err
-      }
+      toContext,
     )
-  })
+  }
 }

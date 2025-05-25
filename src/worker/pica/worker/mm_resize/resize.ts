@@ -1,5 +1,5 @@
 
-import { PicaTileOptions } from '../../../..'
+import { Filter } from '../../../..'
 import { resizeFilterGen as createFilters } from './resize_filter_gen'
 import { convolveHor, convolveVert, convolveHorWithPre, convolveVertWithPre } from './convolve'
 
@@ -18,44 +18,44 @@ function hasAlpha(
 }
 
 function resetAlpha(
-  dst: Uint8Array<ArrayBufferLike>,
+  dest: Uint8Array<ArrayBufferLike>,
   width: number,
   height: number,
 ) {
   let ptr = 3
   let len = (width * height * 4) | 0
   while (ptr < len) {
-    dst[ptr] = 0xFF
+    dest[ptr] = 0xFF
     ptr = (ptr + 4) | 0
   }
 }
 
-export function resize(picaTileOptions: PicaTileOptions) {
-  const src = picaTileOptions.src
-  const srcW = picaTileOptions.width
-  const srcH = picaTileOptions.height
-  const destW = picaTileOptions.toWidth
-  const destH = picaTileOptions.toHeight
-  const scaleX = picaTileOptions.scaleX || picaTileOptions.toWidth / picaTileOptions.width
-  const scaleY = picaTileOptions.scaleY || picaTileOptions.toHeight / picaTileOptions.height
-  const offsetX = picaTileOptions.offsetX || 0
-  const offsetY = picaTileOptions.offsetY || 0
-  const dest = picaTileOptions.dest || new Uint8Array(destW * destH * 4)
+export function resize(
+  filter: Filter,
+  tileImageData: Uint8ClampedArray<ArrayBufferLike>,
+  tileWidth: number,
+  tileHeight: number,
+  tileToWidth: number,
+  tileToHeight: number,
+  tileScaleX: number,
+  tileScaleY: number,
+  tileOffsetX: number,
+  tileOffsetY: number,
+) {
+  const filtersX = createFilters(filter, tileWidth, tileToWidth, tileScaleX, tileOffsetX)
+  const filtersY = createFilters(filter, tileHeight, tileToHeight, tileScaleY, tileOffsetY)
 
-  const filter = typeof picaTileOptions.filter === 'undefined' ? 'mks2013' : picaTileOptions.filter
-  const filtersX = createFilters(filter, srcW, destW, scaleX, offsetX)
-  const filtersY = createFilters(filter, srcH, destH, scaleY, offsetY)
-
-  const tmp = new Uint16Array(destW * srcH * 4)
+  const dest = new Uint8Array(tileToWidth * tileToHeight * 4)
+  const temp = new Uint16Array(tileToWidth * tileHeight * 4)
 
   // Autodetect if alpha channel exists, and use appropriate method
-  if (hasAlpha(src!, srcW, srcH)) {
-    convolveHorWithPre(src!, tmp, srcW, srcH, destW, filtersX)
-    convolveVertWithPre(tmp, dest, srcH, destW, destH, filtersY)
+  if (hasAlpha(tileImageData, tileWidth, tileHeight)) {
+    convolveHorWithPre(tileImageData, temp, tileWidth, tileHeight, tileToWidth, filtersX)
+    convolveVertWithPre(temp, dest, tileHeight, tileToWidth, tileToHeight, filtersY)
   } else {
-    convolveHor(src!, tmp, srcW, srcH, destW, filtersX)
-    convolveVert(tmp, dest, srcH, destW, destH, filtersY)
-    resetAlpha(dest, destW, destH)
+    convolveHor(tileImageData, temp, tileWidth, tileHeight, tileToWidth, filtersX)
+    convolveVert(temp, dest, tileHeight, tileToWidth, tileToHeight, filtersY)
+    resetAlpha(dest, tileToWidth, tileToHeight)
   }
 
   return dest

@@ -43,7 +43,7 @@ export type PicaTileOptions = {
   dest?: Uint8Array
 }
 
-export type PicaTile = {
+export type TileData = {
   toX: number
   toY: number
   toWidth: number
@@ -69,7 +69,10 @@ export type StageEnv = {
   toCtx: OffscreenCanvasRenderingContext2D | null
 }
 
-export type ResizeStage = [number, number]
+export type ResizeStage = {
+  toWidth: number
+  toHeight: number
+}
 
 export async function resize(blob: Blob, options: Options) {
   const maxDimension = options.maxDimension
@@ -87,8 +90,6 @@ export async function resize(blob: Blob, options: Options) {
   const scaleFactor = Math.min(widthRatio, heightRatio, 1) // 1 to not scale it up
   const toWidth = Math.floor(originalWidth * scaleFactor)
   const toHeight = Math.floor(originalHeight * scaleFactor)
-
-  const offscreenCanvas = new OffscreenCanvas(toWidth, toHeight)
 
   const DEST_TILE_BORDER = 3 // Max possible filter window size
   const destTileBorder = Math.ceil(Math.max(DEST_TILE_BORDER, 2.5 * unsharpRadius | 0))
@@ -117,11 +118,6 @@ export async function resize(blob: Blob, options: Options) {
   const result = await processStages(
     stages,
     imageBitmap,
-    offscreenCanvas,
-    picaOptions.width,
-    picaOptions.height,
-    picaOptions.toWidth,
-    picaOptions.toHeight,
     1024,
     picaOptions.destTileBorder,
     picaOptions.filter,
@@ -130,7 +126,5 @@ export async function resize(blob: Blob, options: Options) {
     picaOptions.unsharpThreshold,
   )
 
-  const resizedImageBitmap = result.transferToImageBitmap()
-
-  return resizedImageBitmap as ImageBitmap
+  return result.transferToImageBitmap()
 }

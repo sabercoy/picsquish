@@ -34,7 +34,7 @@ export function createTiles(
 
   // prevent infinite loop, this should never happen
   if (innerTileWidth < 1 || innerTileHeight < 1) {
-    throw new Error('Internal error in pica: target tile width/height is too small.')
+    throw new Error('Internal error in picsquish: target tile width/height is too small.')
   }
 
   let x, y

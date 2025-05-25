@@ -186,17 +186,6 @@ function createStages(fromWidth, fromHeight, toWidth, toHeight, srcTileSize, des
   return stages;
 }
 
-// src/worker/pica/client/extractTile.ts
-function extractTile(tileData, from) {
-  const tileCanvas = new OffscreenCanvas(tileData.width, tileData.height);
-  const tileContext = tileCanvas.getContext("2d");
-  if (!tileContext)
-    throw new Error("Pica: Canvas context is not supported");
-  tileContext.globalCompositeOperation = "copy";
-  tileContext.drawImage(from, tileData.x, tileData.y, tileData.width, tileData.height, 0, 0, tileData.width, tileData.height);
-  return tileContext.getImageData(0, 0, tileData.width, tileData.height).data;
-}
-
 // src/worker/pica/client/createTiles.ts
 var PIXEL_EPSILON = 0.00001;
 function pixelFloor(x) {
@@ -257,6 +246,17 @@ function createTiles(width, height, srcTileSize, toWidth, toHeight, destTileBord
     }
   }
   return tiles;
+}
+
+// src/worker/pica/client/extractTile.ts
+function extractTile(tileData, from) {
+  const tileCanvas = new OffscreenCanvas(tileData.width, tileData.height);
+  const tileContext = tileCanvas.getContext("2d");
+  if (!tileContext)
+    throw new Error("Pica: Canvas context is not supported");
+  tileContext.globalCompositeOperation = "copy";
+  tileContext.drawImage(from, tileData.x, tileData.y, tileData.width, tileData.height, 0, 0, tileData.width, tileData.height);
+  return tileContext.getImageData(0, 0, tileData.width, tileData.height).data;
 }
 
 // src/worker/pica/client/landTile.ts
@@ -636,28 +636,25 @@ function resizeAndUnsharp(filter, tile, tileWidth, tileHeight, tileToWidth, tile
   return resizedTile;
 }
 
-// src/worker/pica/client/tileAndResize.ts
+// src/worker/pica/client/processTile.ts
 var processTile = (tileData, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, toContext) => {
   const tile = extractTile(tileData, from);
   const resizedTile = resizeAndUnsharp(filter, tile, tileData.width, tileData.height, tileData.toWidth, tileData.toHeight, tileData.scaleX, tileData.scaleY, tileData.offsetX, tileData.offsetY, unsharpAmount, unsharpRadius, unsharpThreshold);
   landTile(tileData, resizedTile, toContext);
 };
-async function tileAndResize(from, to, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
-  const toContext = to.getContext("2d");
-  if (!toContext)
-    throw new Error("Pica: Canvas context is not supported");
-  const tiles = createTiles(from.width, from.height, srcTileSize, to.width, to.height, destTileBorder);
-  for (const tile of tiles) {
-    processTile(tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, toContext);
-  }
-}
 
 // src/worker/pica/client/processStages.ts
 async function processStages(stages, original, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
   let from = original;
   let to = new OffscreenCanvas(stages[0].toWidth, stages[0].toHeight);
   for (let i = 0;i < stages.length; i++) {
-    await tileAndResize(from, to, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
+    const toContext = to.getContext("2d");
+    if (!toContext)
+      throw new Error("Pica: Canvas context is not supported");
+    const tiles = createTiles(from.width, from.height, srcTileSize, to.width, to.height, destTileBorder);
+    for (const tile of tiles) {
+      processTile(tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, toContext);
+    }
     const nextStage = stages[i + 1];
     if (!nextStage)
       break;
@@ -880,17 +877,6 @@ function createStages(fromWidth, fromHeight, toWidth, toHeight, srcTileSize, des
   return stages;
 }
 
-// src/worker/pica/client/extractTile.ts
-function extractTile(tileData, from) {
-  const tileCanvas = new OffscreenCanvas(tileData.width, tileData.height);
-  const tileContext = tileCanvas.getContext("2d");
-  if (!tileContext)
-    throw new Error("Pica: Canvas context is not supported");
-  tileContext.globalCompositeOperation = "copy";
-  tileContext.drawImage(from, tileData.x, tileData.y, tileData.width, tileData.height, 0, 0, tileData.width, tileData.height);
-  return tileContext.getImageData(0, 0, tileData.width, tileData.height).data;
-}
-
 // src/worker/pica/client/createTiles.ts
 var PIXEL_EPSILON = 0.00001;
 function pixelFloor(x) {
@@ -951,6 +937,17 @@ function createTiles(width, height, srcTileSize, toWidth, toHeight, destTileBord
     }
   }
   return tiles;
+}
+
+// src/worker/pica/client/extractTile.ts
+function extractTile(tileData, from) {
+  const tileCanvas = new OffscreenCanvas(tileData.width, tileData.height);
+  const tileContext = tileCanvas.getContext("2d");
+  if (!tileContext)
+    throw new Error("Pica: Canvas context is not supported");
+  tileContext.globalCompositeOperation = "copy";
+  tileContext.drawImage(from, tileData.x, tileData.y, tileData.width, tileData.height, 0, 0, tileData.width, tileData.height);
+  return tileContext.getImageData(0, 0, tileData.width, tileData.height).data;
 }
 
 // src/worker/pica/client/landTile.ts
@@ -1330,28 +1327,25 @@ function resizeAndUnsharp(filter, tile, tileWidth, tileHeight, tileToWidth, tile
   return resizedTile;
 }
 
-// src/worker/pica/client/tileAndResize.ts
+// src/worker/pica/client/processTile.ts
 var processTile = (tileData, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, toContext) => {
   const tile = extractTile(tileData, from);
   const resizedTile = resizeAndUnsharp(filter, tile, tileData.width, tileData.height, tileData.toWidth, tileData.toHeight, tileData.scaleX, tileData.scaleY, tileData.offsetX, tileData.offsetY, unsharpAmount, unsharpRadius, unsharpThreshold);
   landTile(tileData, resizedTile, toContext);
 };
-async function tileAndResize(from, to, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
-  const toContext = to.getContext("2d");
-  if (!toContext)
-    throw new Error("Pica: Canvas context is not supported");
-  const tiles = createTiles(from.width, from.height, srcTileSize, to.width, to.height, destTileBorder);
-  for (const tile of tiles) {
-    processTile(tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, toContext);
-  }
-}
 
 // src/worker/pica/client/processStages.ts
 async function processStages(stages, original, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
   let from = original;
   let to = new OffscreenCanvas(stages[0].toWidth, stages[0].toHeight);
   for (let i = 0;i < stages.length; i++) {
-    await tileAndResize(from, to, srcTileSize, destTileBorder, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
+    const toContext = to.getContext("2d");
+    if (!toContext)
+      throw new Error("Pica: Canvas context is not supported");
+    const tiles = createTiles(from.width, from.height, srcTileSize, to.width, to.height, destTileBorder);
+    for (const tile of tiles) {
+      processTile(tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, toContext);
+    }
     const nextStage = stages[i + 1];
     if (!nextStage)
       break;
@@ -1519,7 +1513,7 @@ class TaskQueue {
     return new Promise((resolve, reject) => {
       this.#taskQueue.push({
         id: createId(),
-        data: { blob: taskData.blob, options: taskData.options },
+        data: taskData,
         resolve,
         reject
       });

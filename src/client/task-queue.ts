@@ -172,7 +172,7 @@ export class TaskQueue {
     return new Promise<TaskResult['output']>((resolve, reject) => {
       this.#taskQueue.push({
         id: createId(),
-        data: { blob: taskData.blob, options: taskData.options },
+        data: taskData,
         resolve,
         reject
       })

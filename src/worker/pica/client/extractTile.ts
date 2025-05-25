@@ -6,7 +6,7 @@ export function extractTile(
 ) {
   const tileCanvas = new OffscreenCanvas(tileData.width, tileData.height)
   const tileContext = tileCanvas.getContext('2d')
-  if (!tileContext) throw new Error('Pica: Canvas context is not supported')
+  if (!tileContext) throw new Error('PicSquish: Canvas context is not supported')
     
   tileContext.globalCompositeOperation = 'copy'
   tileContext.drawImage(

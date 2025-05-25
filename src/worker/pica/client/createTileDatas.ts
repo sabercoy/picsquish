@@ -18,7 +18,7 @@ function pixelCeil(x: number) {
   return Math.ceil(x)
 }
 
-export function createTiles(
+export function createTileDatas(
   width: number,
   height: number,
   srcTileSize: number,

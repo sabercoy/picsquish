@@ -186,7 +186,7 @@ function createStages(fromWidth, fromHeight, toWidth, toHeight, srcTileSize, des
   return stages;
 }
 
-// src/worker/pica/client/createTiles.ts
+// src/worker/pica/client/createTileDatas.ts
 var PIXEL_EPSILON = 0.00001;
 function pixelFloor(x) {
   let nearest = Math.round(x);
@@ -200,13 +200,13 @@ function pixelCeil(x) {
     return nearest;
   return Math.ceil(x);
 }
-function createTiles(width, height, srcTileSize, toWidth, toHeight, destTileBorder) {
+function createTileDatas(width, height, srcTileSize, toWidth, toHeight, destTileBorder) {
   const scaleX = toWidth / width;
   const scaleY = toHeight / height;
   const innerTileWidth = pixelFloor(srcTileSize * scaleX) - 2 * destTileBorder;
   const innerTileHeight = pixelFloor(srcTileSize * scaleY) - 2 * destTileBorder;
   if (innerTileWidth < 1 || innerTileHeight < 1) {
-    throw new Error("Internal error in pica: target tile width/height is too small.");
+    throw new Error("Internal error in picsquish: target tile width/height is too small.");
   }
   let x, y;
   let innerX, innerY, toTileWidth, toTileHeight;
@@ -248,17 +248,6 @@ function createTiles(width, height, srcTileSize, toWidth, toHeight, destTileBord
   return tiles;
 }
 
-// src/worker/pica/client/extractTile.ts
-function extractTile(tileData, from) {
-  const tileCanvas = new OffscreenCanvas(tileData.width, tileData.height);
-  const tileContext = tileCanvas.getContext("2d");
-  if (!tileContext)
-    throw new Error("Pica: Canvas context is not supported");
-  tileContext.globalCompositeOperation = "copy";
-  tileContext.drawImage(from, tileData.x, tileData.y, tileData.width, tileData.height, 0, 0, tileData.width, tileData.height);
-  return tileContext.getImageData(0, 0, tileData.width, tileData.height).data;
-}
-
 // src/worker/pica/client/landTile.ts
 function landTile(tileData, resizedTile, toContext) {
   const toImageData = new ImageData(new Uint8ClampedArray(resizedTile), tileData.toWidth, tileData.toHeight);
@@ -268,6 +257,17 @@ function landTile(tileData, resizedTile, toContext) {
   } else {
     toContext.putImageData(toImageData, tileData.toX, tileData.toY, tileData.toInnerX - tileData.toX, tileData.toInnerY - tileData.toY, tileData.toInnerWidth, tileData.toInnerHeight);
   }
+}
+
+// src/worker/pica/client/extractTile.ts
+function extractTile(tileData, from) {
+  const tileCanvas = new OffscreenCanvas(tileData.width, tileData.height);
+  const tileContext = tileCanvas.getContext("2d");
+  if (!tileContext)
+    throw new Error("PicSquish: Canvas context is not supported");
+  tileContext.globalCompositeOperation = "copy";
+  tileContext.drawImage(from, tileData.x, tileData.y, tileData.width, tileData.height, 0, 0, tileData.width, tileData.height);
+  return tileContext.getImageData(0, 0, tileData.width, tileData.height).data;
 }
 
 // src/worker/pica/worker/mm_resize/resize_filter_info.ts
@@ -636,11 +636,11 @@ function resizeAndUnsharp(filter, tile, tileWidth, tileHeight, tileToWidth, tile
   return resizedTile;
 }
 
-// src/worker/pica/client/processTile.ts
-var processTile = (tileData, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, toContext) => {
+// src/worker/pica/client/resizeTile.ts
+var resizeTile = (tileData, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold) => {
   const tile = extractTile(tileData, from);
   const resizedTile = resizeAndUnsharp(filter, tile, tileData.width, tileData.height, tileData.toWidth, tileData.toHeight, tileData.scaleX, tileData.scaleY, tileData.offsetX, tileData.offsetY, unsharpAmount, unsharpRadius, unsharpThreshold);
-  landTile(tileData, resizedTile, toContext);
+  return resizedTile;
 };
 
 // src/worker/pica/client/processStages.ts
@@ -650,10 +650,11 @@ async function processStages(stages, original, srcTileSize, destTileBorder, filt
   for (let i = 0;i < stages.length; i++) {
     const toContext = to.getContext("2d");
     if (!toContext)
-      throw new Error("Pica: Canvas context is not supported");
-    const tiles = createTiles(from.width, from.height, srcTileSize, to.width, to.height, destTileBorder);
-    for (const tile of tiles) {
-      processTile(tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, toContext);
+      throw new Error("PicSquish: Canvas context is not supported");
+    const tileDatas = createTileDatas(from.width, from.height, srcTileSize, to.width, to.height, destTileBorder);
+    for (const tileData of tileDatas) {
+      const resizedTile = resizeTile(tileData, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
+      landTile(tileData, resizedTile, toContext);
     }
     const nextStage = stages[i + 1];
     if (!nextStage)
@@ -877,7 +878,7 @@ function createStages(fromWidth, fromHeight, toWidth, toHeight, srcTileSize, des
   return stages;
 }
 
-// src/worker/pica/client/createTiles.ts
+// src/worker/pica/client/createTileDatas.ts
 var PIXEL_EPSILON = 0.00001;
 function pixelFloor(x) {
   let nearest = Math.round(x);
@@ -891,13 +892,13 @@ function pixelCeil(x) {
     return nearest;
   return Math.ceil(x);
 }
-function createTiles(width, height, srcTileSize, toWidth, toHeight, destTileBorder) {
+function createTileDatas(width, height, srcTileSize, toWidth, toHeight, destTileBorder) {
   const scaleX = toWidth / width;
   const scaleY = toHeight / height;
   const innerTileWidth = pixelFloor(srcTileSize * scaleX) - 2 * destTileBorder;
   const innerTileHeight = pixelFloor(srcTileSize * scaleY) - 2 * destTileBorder;
   if (innerTileWidth < 1 || innerTileHeight < 1) {
-    throw new Error("Internal error in pica: target tile width/height is too small.");
+    throw new Error("Internal error in picsquish: target tile width/height is too small.");
   }
   let x, y;
   let innerX, innerY, toTileWidth, toTileHeight;
@@ -939,17 +940,6 @@ function createTiles(width, height, srcTileSize, toWidth, toHeight, destTileBord
   return tiles;
 }
 
-// src/worker/pica/client/extractTile.ts
-function extractTile(tileData, from) {
-  const tileCanvas = new OffscreenCanvas(tileData.width, tileData.height);
-  const tileContext = tileCanvas.getContext("2d");
-  if (!tileContext)
-    throw new Error("Pica: Canvas context is not supported");
-  tileContext.globalCompositeOperation = "copy";
-  tileContext.drawImage(from, tileData.x, tileData.y, tileData.width, tileData.height, 0, 0, tileData.width, tileData.height);
-  return tileContext.getImageData(0, 0, tileData.width, tileData.height).data;
-}
-
 // src/worker/pica/client/landTile.ts
 function landTile(tileData, resizedTile, toContext) {
   const toImageData = new ImageData(new Uint8ClampedArray(resizedTile), tileData.toWidth, tileData.toHeight);
@@ -959,6 +949,17 @@ function landTile(tileData, resizedTile, toContext) {
   } else {
     toContext.putImageData(toImageData, tileData.toX, tileData.toY, tileData.toInnerX - tileData.toX, tileData.toInnerY - tileData.toY, tileData.toInnerWidth, tileData.toInnerHeight);
   }
+}
+
+// src/worker/pica/client/extractTile.ts
+function extractTile(tileData, from) {
+  const tileCanvas = new OffscreenCanvas(tileData.width, tileData.height);
+  const tileContext = tileCanvas.getContext("2d");
+  if (!tileContext)
+    throw new Error("PicSquish: Canvas context is not supported");
+  tileContext.globalCompositeOperation = "copy";
+  tileContext.drawImage(from, tileData.x, tileData.y, tileData.width, tileData.height, 0, 0, tileData.width, tileData.height);
+  return tileContext.getImageData(0, 0, tileData.width, tileData.height).data;
 }
 
 // src/worker/pica/worker/mm_resize/resize_filter_info.ts
@@ -1327,11 +1328,11 @@ function resizeAndUnsharp(filter, tile, tileWidth, tileHeight, tileToWidth, tile
   return resizedTile;
 }
 
-// src/worker/pica/client/processTile.ts
-var processTile = (tileData, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, toContext) => {
+// src/worker/pica/client/resizeTile.ts
+var resizeTile = (tileData, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold) => {
   const tile = extractTile(tileData, from);
   const resizedTile = resizeAndUnsharp(filter, tile, tileData.width, tileData.height, tileData.toWidth, tileData.toHeight, tileData.scaleX, tileData.scaleY, tileData.offsetX, tileData.offsetY, unsharpAmount, unsharpRadius, unsharpThreshold);
-  landTile(tileData, resizedTile, toContext);
+  return resizedTile;
 };
 
 // src/worker/pica/client/processStages.ts
@@ -1341,10 +1342,11 @@ async function processStages(stages, original, srcTileSize, destTileBorder, filt
   for (let i = 0;i < stages.length; i++) {
     const toContext = to.getContext("2d");
     if (!toContext)
-      throw new Error("Pica: Canvas context is not supported");
-    const tiles = createTiles(from.width, from.height, srcTileSize, to.width, to.height, destTileBorder);
-    for (const tile of tiles) {
-      processTile(tile, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold, toContext);
+      throw new Error("PicSquish: Canvas context is not supported");
+    const tileDatas = createTileDatas(from.width, from.height, srcTileSize, to.width, to.height, destTileBorder);
+    for (const tileData of tileDatas) {
+      const resizedTile = resizeTile(tileData, from, filter, unsharpAmount, unsharpRadius, unsharpThreshold);
+      landTile(tileData, resizedTile, toContext);
     }
     const nextStage = stages[i + 1];
     if (!nextStage)

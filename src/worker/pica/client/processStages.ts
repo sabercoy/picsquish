@@ -1,6 +1,7 @@
 import { Filter, ResizeStage } from '../../..'
-import { createTiles } from './createTiles'
-import { processTile } from './processTile'
+import { createTileDatas } from './createTileDatas'
+import { landTile } from './landTile'
+import { resizeTile } from './resizeTile'
 
 export async function processStages(
   stages: ResizeStage[],
@@ -19,7 +20,7 @@ export async function processStages(
     const toContext = to.getContext('2d')
     if (!toContext) throw new Error('PicSquish: Canvas context is not supported')
   
-    const tiles = createTiles(
+    const tileDatas = createTileDatas(
       from.width,
       from.height,
       srcTileSize,
@@ -28,16 +29,17 @@ export async function processStages(
       destTileBorder,
     )
   
-    for (const tile of tiles) {
-      processTile(
-        tile,
+    for (const tileData of tileDatas) {
+      const resizedTile = resizeTile(
+        tileData,
         from,
         filter,
         unsharpAmount,
         unsharpRadius,
         unsharpThreshold,
-        toContext,
       )
+
+      landTile(tileData, resizedTile, toContext)
     }
 
     const nextStage = stages[i + 1]

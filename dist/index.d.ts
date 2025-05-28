@@ -1,16 +1,28 @@
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013';
+export type TileOptions = {
+    srcTileSize: number;
+    filter: Filter;
+    unsharpAmount: number;
+    unsharpRadius: number;
+    unsharpThreshold: number;
+    destTileBorder: number;
+};
 export type Options = {
     maxDimension: number;
     useMainThread?: boolean;
     maxWorkerPoolSize?: number;
     maxWorkerIdleTime?: number;
-    tileSize?: number;
-    unsharpAmount?: number;
-    unsharpRadius?: number;
-    unsharpThreshold?: number;
-    filter?: Filter;
+    srcTileSize?: TileOptions['srcTileSize'];
+    filter?: TileOptions['filter'];
+    unsharpAmount?: TileOptions['unsharpAmount'];
+    unsharpRadius?: TileOptions['unsharpRadius'];
+    unsharpThreshold?: TileOptions['unsharpThreshold'];
 };
-export type TileData = {
+export type ResizeStage = {
+    toWidth: number;
+    toHeight: number;
+};
+export type TileTransform = {
     toX: number;
     toY: number;
     toWidth: number;
@@ -27,9 +39,18 @@ export type TileData = {
     y: number;
     width: number;
     height: number;
+    originalTileSize: number;
+    filter: Filter;
+    unsharpAmount: number;
+    unsharpRadius: number;
+    unsharpThreshold: number;
+    destTileBorder: number;
 };
-export type ResizeStage = {
-    toWidth: number;
-    toHeight: number;
-};
-export declare function resize(blob: Blob, options: Options): Promise<ImageBitmap>;
+export declare function createResizeMetadata(blob: Blob, maxDimension: number, tileOptions: TileOptions): Promise<{
+    from: SharedArrayBuffer;
+    fromWidth: number;
+    fromHeight: number;
+    to: SharedArrayBuffer;
+    tileTransforms: TileTransform[];
+    stages: ResizeStage[];
+}>;

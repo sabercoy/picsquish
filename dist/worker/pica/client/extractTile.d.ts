@@ -1,2 +1,2 @@
-import { TileData } from '../../..';
-export declare function extractTile(tileData: TileData, from: ImageBitmap | OffscreenCanvas): Uint8ClampedArray<ArrayBufferLike>;
+import { TileTransform } from '../../..';
+export declare function extractTile(from: SharedArrayBuffer, fromWidth: number, tileTransform: TileTransform): Uint8ClampedArray<ArrayBuffer>;

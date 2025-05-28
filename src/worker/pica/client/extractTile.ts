@@ -1,25 +1,24 @@
-import { TileData } from '../../..'
+import { TileTransform } from '../../..'
 
 export function extractTile(
-  tileData: TileData,
-  from: ImageBitmap | OffscreenCanvas,
+  from: SharedArrayBuffer,
+  fromWidth: number,
+  tileTransform: TileTransform,
 ) {
-  const tileCanvas = new OffscreenCanvas(tileData.width, tileData.height)
-  const tileContext = tileCanvas.getContext('2d')
-  if (!tileContext) throw new Error('PicSquish: Canvas context is not supported')
-    
-  tileContext.globalCompositeOperation = 'copy'
-  tileContext.drawImage(
-    from,
-    tileData.x,
-    tileData.y,
-    tileData.width,
-    tileData.height,
-    0,
-    0,
-    tileData.width,
-    tileData.height,
-  )
+  const bytesPerPixel = 4
+  const fullImage = new Uint8ClampedArray(from)
+  const tilePixels = new Uint8ClampedArray(tileTransform.width * tileTransform.height * bytesPerPixel)
 
-  return tileContext.getImageData(0, 0, tileData.width, tileData.height).data
+  for (let row = 0; row < tileTransform.height; row++) {
+    const srcStart = ((tileTransform.y + row) * fromWidth + tileTransform.x) * bytesPerPixel
+    const dstStart = row * tileTransform.width * bytesPerPixel
+
+    tilePixels.set(
+      fullImage.subarray(srcStart, srcStart + tileTransform.width * bytesPerPixel),
+      dstStart,
+    )
+  }
+
+  return tilePixels
 }
+

@@ -31,8 +31,8 @@ function resetAlpha(
 }
 
 export function resize(
+  tile: Uint8ClampedArray<ArrayBufferLike>,
   filter: Filter,
-  tileImageData: Uint8ClampedArray<ArrayBufferLike>,
   tileWidth: number,
   tileHeight: number,
   tileToWidth: number,
@@ -49,11 +49,11 @@ export function resize(
   const temp = new Uint16Array(tileToWidth * tileHeight * 4)
 
   // Autodetect if alpha channel exists, and use appropriate method
-  if (hasAlpha(tileImageData, tileWidth, tileHeight)) {
-    convolveHorWithPre(tileImageData, temp, tileWidth, tileHeight, tileToWidth, filtersX)
+  if (hasAlpha(tile, tileWidth, tileHeight)) {
+    convolveHorWithPre(tile, temp, tileWidth, tileHeight, tileToWidth, filtersX)
     convolveVertWithPre(temp, dest, tileHeight, tileToWidth, tileToHeight, filtersY)
   } else {
-    convolveHor(tileImageData, temp, tileWidth, tileHeight, tileToWidth, filtersX)
+    convolveHor(tile, temp, tileWidth, tileHeight, tileToWidth, filtersX)
     convolveVert(temp, dest, tileHeight, tileToWidth, tileToHeight, filtersY)
     resetAlpha(dest, tileToWidth, tileToHeight)
   }

@@ -1,21 +1,35 @@
-import { createStages } from './worker/pica/client/createStages'
-import { processStages } from './worker/pica/client/processStages'
+import { createResizeStages } from './worker/pica/client/createResizeStages'
+import { createTileTransforms } from './worker/pica/client/createTileTransforms'
 
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013'
+
+export type TileOptions = {
+  srcTileSize: number,
+  filter: Filter,
+  unsharpAmount: number,
+  unsharpRadius: number,
+  unsharpThreshold: number,
+  destTileBorder: number,
+}
 
 export type Options = {
   maxDimension: number
   useMainThread?: boolean
   maxWorkerPoolSize?: number
   maxWorkerIdleTime?: number
-  tileSize?: number
-  unsharpAmount?: number
-  unsharpRadius?: number
-  unsharpThreshold?: number
-  filter?: Filter
+  srcTileSize?: TileOptions['srcTileSize']
+  filter?: TileOptions['filter']
+  unsharpAmount?: TileOptions['unsharpAmount']
+  unsharpRadius?: TileOptions['unsharpRadius']
+  unsharpThreshold?: TileOptions['unsharpThreshold']
 }
 
-export type TileData = {
+export type ResizeStage = {
+  toWidth: number
+  toHeight: number
+}
+
+export type TileTransform = {
   toX: number
   toY: number
   toWidth: number
@@ -32,53 +46,70 @@ export type TileData = {
   y: number
   width: number
   height: number
+  originalTileSize: number
+  filter: Filter
+  unsharpAmount: number
+  unsharpRadius: number
+  unsharpThreshold: number
+  destTileBorder: number
 }
 
-export type ResizeStage = {
-  toWidth: number
-  toHeight: number
-}
-
-export async function resize(blob: Blob, options: Options) {
-  const maxDimension = options.maxDimension
-  const tileSize = options.tileSize || 1024
-  const filter = options.filter || 'mks2013'
-
-  const unsharpAmount = options.unsharpAmount || 0
-  const unsharpRadius = options.unsharpRadius || 0
-  const unsharpThreshold = options.unsharpThreshold || 0
-
+export async function createResizeMetadata(
+  blob: Blob,
+  maxDimension: number,
+  tileOptions: TileOptions
+) {
   const imageBitmap = await createImageBitmap(blob)
-  const originalWidth = imageBitmap.width
-  const originalHeight = imageBitmap.height
-  const widthRatio = maxDimension / originalWidth
-  const heightRatio = maxDimension / originalHeight
+  const fromWidth = imageBitmap.width
+  const fromHeight = imageBitmap.height
+  const widthRatio = maxDimension / fromWidth
+  const heightRatio = maxDimension / fromHeight
   const scaleFactor = Math.min(widthRatio, heightRatio, 1) // 1 to not scale it up
-  const toWidth = Math.floor(originalWidth * scaleFactor)
-  const toHeight = Math.floor(originalHeight * scaleFactor)
-
-  const DEST_TILE_BORDER = 3 // Max possible filter window size
-  const destTileBorder = Math.ceil(Math.max(DEST_TILE_BORDER, 2.5 * unsharpRadius | 0))
+  const toWidth = Math.floor(fromWidth * scaleFactor)
+  const toHeight = Math.floor(fromHeight * scaleFactor)
   
-  const stages = createStages(
-    originalWidth,
-    originalHeight,
+  const stages = createResizeStages(
+    fromWidth,
+    fromHeight,
     toWidth,
     toHeight,
-    tileSize,
-    destTileBorder,
+    tileOptions.srcTileSize,
+    tileOptions.destTileBorder,
   )
 
-  const result = await processStages(
+  const tileTransforms = createTileTransforms(
+    fromWidth,
+    fromHeight,
+    tileOptions.srcTileSize,
+    toWidth,
+    toHeight,
+    tileOptions.destTileBorder,
+    tileOptions.srcTileSize,
+    tileOptions.filter,
+    tileOptions.unsharpAmount,
+    tileOptions.unsharpRadius,
+    tileOptions.unsharpThreshold,
+  )
+
+  const canvas = new OffscreenCanvas(fromWidth, fromHeight)
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('PicSquish: Canvas context is not supported')
+  context.drawImage(imageBitmap, 0, 0)
+
+  const imageData = context.getImageData(0, 0, fromWidth, fromHeight)
+  const fromBuffer = new SharedArrayBuffer(imageData.data.byteLength)
+  const fromArray = new Uint8ClampedArray(fromBuffer)
+  fromArray.set(imageData.data)
+
+  const toBufferSize = toWidth * toHeight * 4
+  const toBuffer = new SharedArrayBuffer(toBufferSize)
+
+  return {
+    from: fromBuffer,
+    fromWidth,
+    fromHeight,
+    to: toBuffer,
+    tileTransforms,
     stages,
-    imageBitmap,
-    tileSize,
-    destTileBorder,
-    filter,
-    unsharpAmount,
-    unsharpRadius,
-    unsharpThreshold,
-  )
-
-  return result.transferToImageBitmap()
+  }
 }

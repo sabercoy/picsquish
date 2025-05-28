@@ -17,7 +17,7 @@ import { ResizeStage } from '../../..'
 // min size = 1 can consume large amount of memory
 const MIN_INNER_TILE_SIZE = 2
 
-export function createStages(
+export function createResizeStages(
   fromWidth: number,
   fromHeight: number,
   toWidth: number,

@@ -1,4 +1,4 @@
-import { TileData } from '../../..'
+import { Filter, TileTransform } from '../../..'
 
 const PIXEL_EPSILON = 1e-5
 
@@ -18,13 +18,18 @@ function pixelCeil(x: number) {
   return Math.ceil(x)
 }
 
-export function createTileDatas(
+export function createTileTransforms(
   width: number,
   height: number,
   srcTileSize: number,
   toWidth: number,
   toHeight: number,
   destTileBorder: number,
+  originalTileSize: number,
+  filter: Filter,
+  unsharpAmount: number,
+  unsharpRadius: number,
+  unsharpThreshold: number,
 ) {
   const scaleX = toWidth / width
   const scaleY = toHeight / height
@@ -39,7 +44,7 @@ export function createTileDatas(
 
   let x, y
   let innerX, innerY, toTileWidth, toTileHeight
-  const tiles: TileData[] = []
+  const tiles: TileTransform[] = []
 
   // we go top-to-down instead of left-to-right to make image displayed from top to
   // doesn in the browser
@@ -75,6 +80,13 @@ export function createTileDatas(
         y: pixelFloor(y / scaleY),
         width: pixelCeil(toTileWidth / scaleX),
         height: pixelCeil(toTileHeight / scaleY),
+
+        originalTileSize,
+        filter,
+        unsharpAmount,
+        unsharpRadius,
+        unsharpThreshold,
+        destTileBorder,
       })
     }
   }

@@ -1,18 +1,18 @@
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013';
 export type TileOptions = {
-    srcTileSize: number;
+    initialSize: number;
+    filterPadding: number;
     filter: Filter;
     unsharpAmount: number;
     unsharpRadius: number;
     unsharpThreshold: number;
-    destTileBorder: number;
 };
 export type Options = {
     maxDimension: number;
     useMainThread?: boolean;
     maxWorkerPoolSize?: number;
     maxWorkerIdleTime?: number;
-    srcTileSize?: TileOptions['srcTileSize'];
+    tileSize?: TileOptions['initialSize'];
     filter?: TileOptions['filter'];
     unsharpAmount?: TileOptions['unsharpAmount'];
     unsharpRadius?: TileOptions['unsharpRadius'];
@@ -39,12 +39,12 @@ export type TileTransform = {
     y: number;
     width: number;
     height: number;
-    originalTileSize: number;
+    initialSize: number;
+    filterPadding: number;
     filter: Filter;
     unsharpAmount: number;
     unsharpRadius: number;
     unsharpThreshold: number;
-    destTileBorder: number;
 };
 export declare function createResizeMetadata(blob: Blob, maxDimension: number, tileOptions: TileOptions): Promise<{
     from: SharedArrayBuffer;

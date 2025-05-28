@@ -23,23 +23,23 @@ export class PicSquish {
 
     const combinedOptions = localOptions ? { ...this.#globalOptions, ...localOptions } : this.#globalOptions
     const maxDimension = combinedOptions.maxDimension
-    const srcTileSize = combinedOptions.srcTileSize || 1024
+    const tileSize = combinedOptions.tileSize || 1024
     const filter = combinedOptions.filter || 'mks2013'
     const unsharpAmount = combinedOptions.unsharpAmount || 0
     const unsharpRadius = combinedOptions.unsharpRadius || 0
     const unsharpThreshold = combinedOptions.unsharpThreshold || 0
     const useMainThread = combinedOptions.useMainThread
 
-    const DEST_TILE_BORDER = 3 // Max possible filter window size
-    const destTileBorder = Math.ceil(Math.max(DEST_TILE_BORDER, 2.5 * unsharpRadius | 0))
+    const FILTER_PADDING = 3 // Max possible filter window size
+    const filterPadding = Math.ceil(Math.max(FILTER_PADDING, 2.5 * unsharpRadius | 0))
 
     const tileOptions: TileOptions = {
-      srcTileSize,
+      initialSize: tileSize,
+      filterPadding,
       filter,
       unsharpAmount,
       unsharpRadius,
       unsharpThreshold,
-      destTileBorder,
     }
 
     if (useMainThread) {

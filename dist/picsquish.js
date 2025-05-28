@@ -1,9 +1,9 @@
 // src/worker/pica/client/createResizeStages.ts
 var MIN_INNER_TILE_SIZE = 2;
-function createResizeStages(fromWidth, fromHeight, toWidth, toHeight, srcTileSize, destTileBorder) {
+function createResizeStages(fromWidth, fromHeight, toWidth, toHeight, initialTileSize, filterPadding) {
   const scaleX = toWidth / fromWidth;
   const scaleY = toHeight / fromHeight;
-  const minScale = (2 * destTileBorder + MIN_INNER_TILE_SIZE + 1) / srcTileSize;
+  const minScale = (2 * filterPadding + MIN_INNER_TILE_SIZE + 1) / initialTileSize;
   if (minScale > 0.5)
     return [{ toWidth, toHeight }];
   const stageCount = Math.ceil(Math.log(Math.min(scaleX, scaleY)) / Math.log(minScale));
@@ -32,11 +32,11 @@ function pixelCeil(x) {
     return nearest;
   return Math.ceil(x);
 }
-function createTileTransforms(width, height, srcTileSize, toWidth, toHeight, destTileBorder, originalTileSize, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
+function createTileTransforms(width, height, toWidth, toHeight, initialSize, filterPadding, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
   const scaleX = toWidth / width;
   const scaleY = toHeight / height;
-  const innerTileWidth = pixelFloor(srcTileSize * scaleX) - 2 * destTileBorder;
-  const innerTileHeight = pixelFloor(srcTileSize * scaleY) - 2 * destTileBorder;
+  const innerTileWidth = pixelFloor(initialSize * scaleX) - 2 * filterPadding;
+  const innerTileHeight = pixelFloor(initialSize * scaleY) - 2 * filterPadding;
   if (innerTileWidth < 1 || innerTileHeight < 1) {
     throw new Error("Internal error in picsquish: target tile width/height is too small.");
   }
@@ -45,16 +45,16 @@ function createTileTransforms(width, height, srcTileSize, toWidth, toHeight, des
   const tiles = [];
   for (innerY = 0;innerY < toHeight; innerY += innerTileHeight) {
     for (innerX = 0;innerX < toWidth; innerX += innerTileWidth) {
-      x = innerX - destTileBorder;
+      x = innerX - filterPadding;
       if (x < 0)
         x = 0;
-      toTileWidth = innerX + innerTileWidth + destTileBorder - x;
+      toTileWidth = innerX + innerTileWidth + filterPadding - x;
       if (x + toTileWidth >= toWidth)
         toTileWidth = toWidth - x;
-      y = innerY - destTileBorder;
+      y = innerY - filterPadding;
       if (y < 0)
         y = 0;
-      toTileHeight = innerY + innerTileHeight + destTileBorder - y;
+      toTileHeight = innerY + innerTileHeight + filterPadding - y;
       if (y + toTileHeight >= toHeight)
         toTileHeight = toHeight - y;
       tiles.push({
@@ -74,12 +74,12 @@ function createTileTransforms(width, height, srcTileSize, toWidth, toHeight, des
         y: pixelFloor(y / scaleY),
         width: pixelCeil(toTileWidth / scaleX),
         height: pixelCeil(toTileHeight / scaleY),
-        originalTileSize,
+        initialSize,
+        filterPadding,
         filter,
         unsharpAmount,
         unsharpRadius,
-        unsharpThreshold,
-        destTileBorder
+        unsharpThreshold
       });
     }
   }
@@ -96,8 +96,8 @@ async function createResizeMetadata(blob, maxDimension, tileOptions) {
   const scaleFactor = Math.min(widthRatio, heightRatio, 1);
   const toWidth = Math.floor(fromWidth * scaleFactor);
   const toHeight = Math.floor(fromHeight * scaleFactor);
-  const stages = createResizeStages(fromWidth, fromHeight, toWidth, toHeight, tileOptions.srcTileSize, tileOptions.destTileBorder);
-  const tileTransforms = createTileTransforms(fromWidth, fromHeight, tileOptions.srcTileSize, toWidth, toHeight, tileOptions.destTileBorder, tileOptions.srcTileSize, tileOptions.filter, tileOptions.unsharpAmount, tileOptions.unsharpRadius, tileOptions.unsharpThreshold);
+  const stages = createResizeStages(fromWidth, fromHeight, toWidth, toHeight, tileOptions.initialSize, tileOptions.filterPadding);
+  const tileTransforms = createTileTransforms(fromWidth, fromHeight, toWidth, toHeight, tileOptions.initialSize, tileOptions.filterPadding, tileOptions.filter, tileOptions.unsharpAmount, tileOptions.unsharpRadius, tileOptions.unsharpThreshold);
   const canvas = new OffscreenCanvas(fromWidth, fromHeight);
   const context = canvas.getContext("2d");
   if (!context)
@@ -291,10 +291,10 @@ var require_glur = __commonJS((exports, module) => {
 
 // src/worker/pica/client/createResizeStages.ts
 var MIN_INNER_TILE_SIZE = 2;
-function createResizeStages(fromWidth, fromHeight, toWidth, toHeight, srcTileSize, destTileBorder) {
+function createResizeStages(fromWidth, fromHeight, toWidth, toHeight, initialTileSize, filterPadding) {
   const scaleX = toWidth / fromWidth;
   const scaleY = toHeight / fromHeight;
-  const minScale = (2 * destTileBorder + MIN_INNER_TILE_SIZE + 1) / srcTileSize;
+  const minScale = (2 * filterPadding + MIN_INNER_TILE_SIZE + 1) / initialTileSize;
   if (minScale > 0.5)
     return [{ toWidth, toHeight }];
   const stageCount = Math.ceil(Math.log(Math.min(scaleX, scaleY)) / Math.log(minScale));
@@ -323,11 +323,11 @@ function pixelCeil(x) {
     return nearest;
   return Math.ceil(x);
 }
-function createTileTransforms(width, height, srcTileSize, toWidth, toHeight, destTileBorder, originalTileSize, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
+function createTileTransforms(width, height, toWidth, toHeight, initialSize, filterPadding, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
   const scaleX = toWidth / width;
   const scaleY = toHeight / height;
-  const innerTileWidth = pixelFloor(srcTileSize * scaleX) - 2 * destTileBorder;
-  const innerTileHeight = pixelFloor(srcTileSize * scaleY) - 2 * destTileBorder;
+  const innerTileWidth = pixelFloor(initialSize * scaleX) - 2 * filterPadding;
+  const innerTileHeight = pixelFloor(initialSize * scaleY) - 2 * filterPadding;
   if (innerTileWidth < 1 || innerTileHeight < 1) {
     throw new Error("Internal error in picsquish: target tile width/height is too small.");
   }
@@ -336,16 +336,16 @@ function createTileTransforms(width, height, srcTileSize, toWidth, toHeight, des
   const tiles = [];
   for (innerY = 0;innerY < toHeight; innerY += innerTileHeight) {
     for (innerX = 0;innerX < toWidth; innerX += innerTileWidth) {
-      x = innerX - destTileBorder;
+      x = innerX - filterPadding;
       if (x < 0)
         x = 0;
-      toTileWidth = innerX + innerTileWidth + destTileBorder - x;
+      toTileWidth = innerX + innerTileWidth + filterPadding - x;
       if (x + toTileWidth >= toWidth)
         toTileWidth = toWidth - x;
-      y = innerY - destTileBorder;
+      y = innerY - filterPadding;
       if (y < 0)
         y = 0;
-      toTileHeight = innerY + innerTileHeight + destTileBorder - y;
+      toTileHeight = innerY + innerTileHeight + filterPadding - y;
       if (y + toTileHeight >= toHeight)
         toTileHeight = toHeight - y;
       tiles.push({
@@ -365,12 +365,12 @@ function createTileTransforms(width, height, srcTileSize, toWidth, toHeight, des
         y: pixelFloor(y / scaleY),
         width: pixelCeil(toTileWidth / scaleX),
         height: pixelCeil(toTileHeight / scaleY),
-        originalTileSize,
+        initialSize,
+        filterPadding,
         filter,
         unsharpAmount,
         unsharpRadius,
-        unsharpThreshold,
-        destTileBorder
+        unsharpThreshold
       });
     }
   }
@@ -387,8 +387,8 @@ async function createResizeMetadata(blob, maxDimension, tileOptions) {
   const scaleFactor = Math.min(widthRatio, heightRatio, 1);
   const toWidth = Math.floor(fromWidth * scaleFactor);
   const toHeight = Math.floor(fromHeight * scaleFactor);
-  const stages = createResizeStages(fromWidth, fromHeight, toWidth, toHeight, tileOptions.srcTileSize, tileOptions.destTileBorder);
-  const tileTransforms = createTileTransforms(fromWidth, fromHeight, tileOptions.srcTileSize, toWidth, toHeight, tileOptions.destTileBorder, tileOptions.srcTileSize, tileOptions.filter, tileOptions.unsharpAmount, tileOptions.unsharpRadius, tileOptions.unsharpThreshold);
+  const stages = createResizeStages(fromWidth, fromHeight, toWidth, toHeight, tileOptions.initialSize, tileOptions.filterPadding);
+  const tileTransforms = createTileTransforms(fromWidth, fromHeight, toWidth, toHeight, tileOptions.initialSize, tileOptions.filterPadding, tileOptions.filter, tileOptions.unsharpAmount, tileOptions.unsharpRadius, tileOptions.unsharpThreshold);
   const canvas = new OffscreenCanvas(fromWidth, fromHeight);
   const context = canvas.getContext("2d");
   if (!context)
@@ -539,7 +539,6 @@ class TaskQueue {
           squishContext.toHeight = output.stages[0].toHeight;
           squishContext.stages = output.stages;
           squishContext.remainingTileCount = output.tileTransforms.length;
-          console.log(output.tileTransforms);
           for (const tileTransform of output.tileTransforms) {
             this.#priority2TaskQueue.push({
               id: createId(),
@@ -1183,7 +1182,6 @@ class TaskQueue {
           squishContext.toHeight = output.stages[0].toHeight;
           squishContext.stages = output.stages;
           squishContext.remainingTileCount = output.tileTransforms.length;
-          console.log(output.tileTransforms);
           for (const tileTransform of output.tileTransforms) {
             this.#priority2TaskQueue.push({
               id: createId(),
@@ -1290,21 +1288,21 @@ class PicSquish {
     console.log("SAB", isSharedArrayBufferUsable());
     const combinedOptions = localOptions ? { ...this.#globalOptions, ...localOptions } : this.#globalOptions;
     const maxDimension = combinedOptions.maxDimension;
-    const srcTileSize = combinedOptions.srcTileSize || 1024;
+    const tileSize = combinedOptions.tileSize || 1024;
     const filter = combinedOptions.filter || "mks2013";
     const unsharpAmount = combinedOptions.unsharpAmount || 0;
     const unsharpRadius = combinedOptions.unsharpRadius || 0;
     const unsharpThreshold = combinedOptions.unsharpThreshold || 0;
     const useMainThread = combinedOptions.useMainThread;
-    const DEST_TILE_BORDER = 3;
-    const destTileBorder = Math.ceil(Math.max(DEST_TILE_BORDER, 2.5 * unsharpRadius | 0));
+    const FILTER_PADDING = 3;
+    const filterPadding = Math.ceil(Math.max(FILTER_PADDING, 2.5 * unsharpRadius | 0));
     const tileOptions = {
-      srcTileSize,
+      initialSize: tileSize,
+      filterPadding,
       filter,
       unsharpAmount,
       unsharpRadius,
-      unsharpThreshold,
-      destTileBorder
+      unsharpThreshold
     };
     if (useMainThread) {
       const result = await createResizeMetadata(blob, maxDimension, tileOptions);

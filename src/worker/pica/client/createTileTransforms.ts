@@ -21,11 +21,10 @@ function pixelCeil(x: number) {
 export function createTileTransforms(
   width: number,
   height: number,
-  srcTileSize: number,
   toWidth: number,
   toHeight: number,
-  destTileBorder: number,
-  originalTileSize: number,
+  initialSize: number,
+  filterPadding: number,
   filter: Filter,
   unsharpAmount: number,
   unsharpRadius: number,
@@ -34,8 +33,8 @@ export function createTileTransforms(
   const scaleX = toWidth / width
   const scaleY = toHeight / height
 
-  const innerTileWidth = pixelFloor(srcTileSize * scaleX) - 2 * destTileBorder
-  const innerTileHeight = pixelFloor(srcTileSize * scaleY) - 2 * destTileBorder
+  const innerTileWidth = pixelFloor(initialSize * scaleX) - 2 * filterPadding
+  const innerTileHeight = pixelFloor(initialSize * scaleY) - 2 * filterPadding
 
   // prevent infinite loop, this should never happen
   if (innerTileWidth < 1 || innerTileHeight < 1) {
@@ -50,14 +49,14 @@ export function createTileTransforms(
   // doesn in the browser
   for (innerY = 0; innerY < toHeight; innerY += innerTileHeight) {
     for (innerX = 0; innerX < toWidth; innerX += innerTileWidth) {
-      x = innerX - destTileBorder
+      x = innerX - filterPadding
       if (x < 0) x = 0
-      toTileWidth = innerX + innerTileWidth + destTileBorder - x
+      toTileWidth = innerX + innerTileWidth + filterPadding - x
       if (x + toTileWidth >= toWidth) toTileWidth = toWidth - x
 
-      y = innerY - destTileBorder
+      y = innerY - filterPadding
       if (y < 0) y = 0
-      toTileHeight = innerY + innerTileHeight + destTileBorder - y
+      toTileHeight = innerY + innerTileHeight + filterPadding - y
       if (y + toTileHeight >= toHeight) toTileHeight = toHeight - y
 
       tiles.push({
@@ -81,12 +80,12 @@ export function createTileTransforms(
         width: pixelCeil(toTileWidth / scaleX),
         height: pixelCeil(toTileHeight / scaleY),
 
-        originalTileSize,
+        initialSize,
+        filterPadding,
         filter,
         unsharpAmount,
         unsharpRadius,
         unsharpThreshold,
-        destTileBorder,
       })
     }
   }

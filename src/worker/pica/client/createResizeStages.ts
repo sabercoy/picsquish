@@ -22,15 +22,15 @@ export function createResizeStages(
   fromHeight: number,
   toWidth: number,
   toHeight: number,
-  srcTileSize: number,
-  destTileBorder: number,
+  initialTileSize: number,
+  filterPadding: number,
 ): ResizeStage[] {
   const scaleX = toWidth / fromWidth
   const scaleY = toHeight / fromHeight
 
   // derived from createRegions equation:
-  // innerTileWidth = pixelFloor(srcTileSize * scaleX) - 2 * destTileBorder;
-  const minScale = (2 * destTileBorder + MIN_INNER_TILE_SIZE + 1) / srcTileSize
+  // innerTileWidth = pixelFloor(initialTileSize * scaleX) - 2 * filterPadding;
+  const minScale = (2 * filterPadding + MIN_INNER_TILE_SIZE + 1) / initialTileSize
 
   // refuse to scale image multiple times by less than twice each time,
   // it could only happen because of invalid options

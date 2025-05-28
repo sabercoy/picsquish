@@ -4,12 +4,12 @@ import { createTileTransforms } from './worker/pica/client/createTileTransforms'
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013'
 
 export type TileOptions = {
-  srcTileSize: number,
+  initialSize: number,
+  filterPadding: number,
   filter: Filter,
   unsharpAmount: number,
   unsharpRadius: number,
   unsharpThreshold: number,
-  destTileBorder: number,
 }
 
 export type Options = {
@@ -17,7 +17,7 @@ export type Options = {
   useMainThread?: boolean
   maxWorkerPoolSize?: number
   maxWorkerIdleTime?: number
-  srcTileSize?: TileOptions['srcTileSize']
+  tileSize?: TileOptions['initialSize']
   filter?: TileOptions['filter']
   unsharpAmount?: TileOptions['unsharpAmount']
   unsharpRadius?: TileOptions['unsharpRadius']
@@ -46,12 +46,12 @@ export type TileTransform = {
   y: number
   width: number
   height: number
-  originalTileSize: number
+  initialSize: number
+  filterPadding: number
   filter: Filter
   unsharpAmount: number
   unsharpRadius: number
   unsharpThreshold: number
-  destTileBorder: number
 }
 
 export async function createResizeMetadata(
@@ -73,18 +73,17 @@ export async function createResizeMetadata(
     fromHeight,
     toWidth,
     toHeight,
-    tileOptions.srcTileSize,
-    tileOptions.destTileBorder,
+    tileOptions.initialSize,
+    tileOptions.filterPadding,
   )
 
   const tileTransforms = createTileTransforms(
     fromWidth,
     fromHeight,
-    tileOptions.srcTileSize,
     toWidth,
     toHeight,
-    tileOptions.destTileBorder,
-    tileOptions.srcTileSize,
+    tileOptions.initialSize,
+    tileOptions.filterPadding,
     tileOptions.filter,
     tileOptions.unsharpAmount,
     tileOptions.unsharpRadius,

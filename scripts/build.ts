@@ -51,8 +51,11 @@ const workerBundledCode = await Bun.file(workerBundlePath).text()
 const clientMinifiedCode = await Bun.file(clientMinifiedPath).text()
 const workerMinifiedCode = await Bun.file(workerMinifiedPath).text()
 
-const finalBundledCode = clientBundledCode.replace(`"<WORKER_CODE>"`, '`\n' + workerBundledCode + '`')
-const finalMinifiedCode = clientMinifiedCode.replace(`"<WORKER_CODE>"`, '`\n' + workerMinifiedCode + '`')
+const escapedWorkerBundledCode = escapeWorkerCode(workerBundledCode)
+const escapedWorkerMinifiedCode = escapeWorkerCode(workerMinifiedCode)
+
+const finalBundledCode = clientBundledCode.replace(`"<WORKER_CODE>"`, '`\n' + escapedWorkerBundledCode + '`')
+const finalMinifiedCode = clientMinifiedCode.replace(`"<WORKER_CODE>"`, '`\n' + escapedWorkerMinifiedCode + '`')
 
 Bun.write(finalBundlePath, finalBundledCode)
 Bun.write(finalMinifiedPath, finalMinifiedCode)
@@ -66,3 +69,15 @@ await $`rm ./dist/${workerFileName}.min.js`
 await $`bun x tsc`
 
 export {}
+
+function escapeWorkerCode(code: string) {
+  // escape backslashes: \ becomes \\
+  code = code.replace(/\\/g, '\\\\')
+  // escape backticks: ` becomes \`
+  code = code.replace(/`/g, '\\`')
+  // escape interpolations: ${ becomes \${
+  code = code.replace(/\$\{/g, '\\${')
+
+  return code
+}
+

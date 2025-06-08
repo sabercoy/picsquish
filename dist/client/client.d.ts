@@ -3,10 +3,9 @@ export declare class PicSquish {
     #private;
     constructor(options: Options);
     squish(blob: Blob, localOptions?: Options): Promise<ImageBitmap | {
-        from: SharedArrayBuffer;
+        from: ArrayBufferLike;
         fromWidth: number;
         fromHeight: number;
-        to: SharedArrayBuffer;
         tileTransforms: import("..").TileTransform[];
         stages: import("..").ResizeStage[];
     }>;

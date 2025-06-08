@@ -1,8 +1,6 @@
-import { createResizeMetadata, TileTransform } from '..'
+import { createResizeMetadata } from '..'
 import { TaskMessage, TaskMessage1, TaskMessage2, TaskResult1, TaskResult2, TaskType } from '../client/task-queue'
 import { transformTile } from './pica/worker/transformTile'
-import { placeTransformedTile } from './pica/client/placeTransformedTile'
-import { extractTile } from './pica/client/extractTile'
 
 self.onmessage = async (event: MessageEvent<TaskMessage>) => {
   const { taskId, squishId, taskType } = event.data
@@ -11,6 +9,7 @@ self.onmessage = async (event: MessageEvent<TaskMessage>) => {
     if (taskType === TaskType.CreateResizeMetadata) {
       const { blob, maxDimension, tileOptions } = event.data as TaskMessage1
       const result = await createResizeMetadata(blob, maxDimension, tileOptions)
+      
       const taskResult: TaskResult1 = {
         taskId,
         squishId,
@@ -19,31 +18,31 @@ self.onmessage = async (event: MessageEvent<TaskMessage>) => {
           from: result.from,
           fromWidth: result.fromWidth,
           fromHeight: result.fromHeight,
-          to: result.to,
           tileTransforms: result.tileTransforms,
           stages: result.stages,
         }
       }
-      
-      self.postMessage(taskResult)
+
+      const tiles = result.tileTransforms.map(tileTransform => tileTransform.tile)
+
+      self.postMessage(taskResult, [result.from, ...tiles])
     }
 
     if (taskType === TaskType.TransformTile) {
-      const { tileTransform, from, fromWidth, to, toWidth } = event.data as TaskMessage2
+      const { tileTransform } = event.data as TaskMessage2
 
-      const tile = extractTile(from, fromWidth, tileTransform)
-      const transformedTile = transformTile(tile, tileTransform)
-      placeTransformedTile(to, toWidth, tileTransform, transformedTile)
+      tileTransform.tile = transformTile(tileTransform).buffer
 
       const taskResult: TaskResult2 = {
         taskId,
         squishId,
         taskType,
+        output: { tileTransform },
       }
 
-      self.postMessage(taskResult)
+      self.postMessage(taskResult, [tileTransform.tile])
     }
   } catch (error) {
-    self.postMessage({ taskId, error: error as Error })
+    self.postMessage({ taskId, squishId, taskType, error: error as Error })
   }
 }

@@ -18,6 +18,17 @@ function createResizeStages(fromWidth, fromHeight, toWidth, toHeight, initialTil
   return stages;
 }
 
+// src/worker/pica/client/extractTile.ts
+function extractTile(from, fromWidth, tileTransform) {
+  const tilePixels = new Uint8ClampedArray(tileTransform.width * tileTransform.height * BYTES_PER_PIXEL);
+  for (let row = 0;row < tileTransform.height; row++) {
+    const srcStart = ((tileTransform.y + row) * fromWidth + tileTransform.x) * BYTES_PER_PIXEL;
+    const dstStart = row * tileTransform.width * BYTES_PER_PIXEL;
+    tilePixels.set(from.subarray(srcStart, srcStart + tileTransform.width * BYTES_PER_PIXEL), dstStart);
+  }
+  return tilePixels;
+}
+
 // src/worker/pica/client/createTileTransforms.ts
 var PIXEL_EPSILON = 0.00001;
 function pixelFloor(x) {
@@ -32,9 +43,9 @@ function pixelCeil(x) {
     return nearest;
   return Math.ceil(x);
 }
-function createTileTransforms(width, height, toWidth, toHeight, initialSize, filterPadding, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
-  const scaleX = toWidth / width;
-  const scaleY = toHeight / height;
+function createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, initialSize, filterPadding, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
+  const scaleX = toWidth / fromWidth;
+  const scaleY = toHeight / fromHeight;
   const innerTileWidth = pixelFloor(initialSize * scaleX) - 2 * filterPadding;
   const innerTileHeight = pixelFloor(initialSize * scaleY) - 2 * filterPadding;
   if (innerTileWidth < 1 || innerTileHeight < 1) {
@@ -42,7 +53,7 @@ function createTileTransforms(width, height, toWidth, toHeight, initialSize, fil
   }
   let x, y;
   let innerX, innerY, toTileWidth, toTileHeight;
-  const tiles = [];
+  const tileTransforms = [];
   for (innerY = 0;innerY < toHeight; innerY += innerTileHeight) {
     for (innerX = 0;innerX < toWidth; innerX += innerTileWidth) {
       x = innerX - filterPadding;
@@ -57,7 +68,7 @@ function createTileTransforms(width, height, toWidth, toHeight, initialSize, fil
       toTileHeight = innerY + innerTileHeight + filterPadding - y;
       if (y + toTileHeight >= toHeight)
         toTileHeight = toHeight - y;
-      tiles.push({
+      const tileTransform = {
         toX: x,
         toY: y,
         toWidth: toTileWidth,
@@ -80,15 +91,25 @@ function createTileTransforms(width, height, toWidth, toHeight, initialSize, fil
         unsharpAmount,
         unsharpRadius,
         unsharpThreshold
-      });
+      };
+      const tile = extractTile(from, fromWidth, tileTransform);
+      tileTransforms.push({ tile: tile.buffer, ...tileTransform });
     }
   }
-  return tiles;
+  return tileTransforms;
 }
 
 // src/index.ts
+var BYTES_PER_PIXEL = 4;
 async function createResizeMetadata(blob, maxDimension, tileOptions) {
   const imageBitmap = await createImageBitmap(blob);
+  const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
+  const context = canvas.getContext("2d");
+  if (!context)
+    throw new Error("Canvas 2D context not supported");
+  context.drawImage(imageBitmap, 0, 0);
+  const imageData = context.getImageData(0, 0, imageBitmap.width, imageBitmap.height);
+  const from = imageData.data;
   const fromWidth = imageBitmap.width;
   const fromHeight = imageBitmap.height;
   const widthRatio = maxDimension / fromWidth;
@@ -97,26 +118,24 @@ async function createResizeMetadata(blob, maxDimension, tileOptions) {
   const toWidth = Math.floor(fromWidth * scaleFactor);
   const toHeight = Math.floor(fromHeight * scaleFactor);
   const stages = createResizeStages(fromWidth, fromHeight, toWidth, toHeight, tileOptions.initialSize, tileOptions.filterPadding);
-  const tileTransforms = createTileTransforms(fromWidth, fromHeight, toWidth, toHeight, tileOptions.initialSize, tileOptions.filterPadding, tileOptions.filter, tileOptions.unsharpAmount, tileOptions.unsharpRadius, tileOptions.unsharpThreshold);
-  const canvas = new OffscreenCanvas(fromWidth, fromHeight);
-  const context = canvas.getContext("2d");
-  if (!context)
-    throw new Error("PicSquish: Canvas context is not supported");
-  context.drawImage(imageBitmap, 0, 0);
-  const imageData = context.getImageData(0, 0, fromWidth, fromHeight);
-  const fromBuffer = new SharedArrayBuffer(imageData.data.byteLength);
-  const fromArray = new Uint8ClampedArray(fromBuffer);
-  fromArray.set(imageData.data);
-  const toBufferSize = toWidth * toHeight * 4;
-  const toBuffer = new SharedArrayBuffer(toBufferSize);
+  const tileTransforms = createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, tileOptions.initialSize, tileOptions.filterPadding, tileOptions.filter, tileOptions.unsharpAmount, tileOptions.unsharpRadius, tileOptions.unsharpThreshold);
   return {
-    from: fromBuffer,
+    from: from.buffer,
     fromWidth,
     fromHeight,
-    to: toBuffer,
     tileTransforms,
     stages
   };
+}
+
+// src/worker/pica/client/placeTransformedTile.ts
+function placeTransformedTile(to, toWidth, tileTransform) {
+  const tile = new Uint8ClampedArray(tileTransform.tile);
+  for (let row = 0;row < tileTransform.toHeight; row++) {
+    const fromStart = row * tileTransform.toWidth * BYTES_PER_PIXEL;
+    const toStart = ((tileTransform.toY + row) * toWidth + tileTransform.toX) * BYTES_PER_PIXEL;
+    to.set(tile.subarray(fromStart, fromStart + tileTransform.toWidth * BYTES_PER_PIXEL), toStart);
+  }
 }
 
 // src/client/task-queue.ts
@@ -309,6 +328,17 @@ function createResizeStages(fromWidth, fromHeight, toWidth, toHeight, initialTil
   return stages;
 }
 
+// src/worker/pica/client/extractTile.ts
+function extractTile(from, fromWidth, tileTransform) {
+  const tilePixels = new Uint8ClampedArray(tileTransform.width * tileTransform.height * BYTES_PER_PIXEL);
+  for (let row = 0;row < tileTransform.height; row++) {
+    const srcStart = ((tileTransform.y + row) * fromWidth + tileTransform.x) * BYTES_PER_PIXEL;
+    const dstStart = row * tileTransform.width * BYTES_PER_PIXEL;
+    tilePixels.set(from.subarray(srcStart, srcStart + tileTransform.width * BYTES_PER_PIXEL), dstStart);
+  }
+  return tilePixels;
+}
+
 // src/worker/pica/client/createTileTransforms.ts
 var PIXEL_EPSILON = 0.00001;
 function pixelFloor(x) {
@@ -323,9 +353,9 @@ function pixelCeil(x) {
     return nearest;
   return Math.ceil(x);
 }
-function createTileTransforms(width, height, toWidth, toHeight, initialSize, filterPadding, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
-  const scaleX = toWidth / width;
-  const scaleY = toHeight / height;
+function createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, initialSize, filterPadding, filter, unsharpAmount, unsharpRadius, unsharpThreshold) {
+  const scaleX = toWidth / fromWidth;
+  const scaleY = toHeight / fromHeight;
   const innerTileWidth = pixelFloor(initialSize * scaleX) - 2 * filterPadding;
   const innerTileHeight = pixelFloor(initialSize * scaleY) - 2 * filterPadding;
   if (innerTileWidth < 1 || innerTileHeight < 1) {
@@ -333,7 +363,7 @@ function createTileTransforms(width, height, toWidth, toHeight, initialSize, fil
   }
   let x, y;
   let innerX, innerY, toTileWidth, toTileHeight;
-  const tiles = [];
+  const tileTransforms = [];
   for (innerY = 0;innerY < toHeight; innerY += innerTileHeight) {
     for (innerX = 0;innerX < toWidth; innerX += innerTileWidth) {
       x = innerX - filterPadding;
@@ -348,7 +378,7 @@ function createTileTransforms(width, height, toWidth, toHeight, initialSize, fil
       toTileHeight = innerY + innerTileHeight + filterPadding - y;
       if (y + toTileHeight >= toHeight)
         toTileHeight = toHeight - y;
-      tiles.push({
+      const tileTransform = {
         toX: x,
         toY: y,
         toWidth: toTileWidth,
@@ -371,15 +401,25 @@ function createTileTransforms(width, height, toWidth, toHeight, initialSize, fil
         unsharpAmount,
         unsharpRadius,
         unsharpThreshold
-      });
+      };
+      const tile = extractTile(from, fromWidth, tileTransform);
+      tileTransforms.push({ tile: tile.buffer, ...tileTransform });
     }
   }
-  return tiles;
+  return tileTransforms;
 }
 
 // src/index.ts
+var BYTES_PER_PIXEL = 4;
 async function createResizeMetadata(blob, maxDimension, tileOptions) {
   const imageBitmap = await createImageBitmap(blob);
+  const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
+  const context = canvas.getContext("2d");
+  if (!context)
+    throw new Error("Canvas 2D context not supported");
+  context.drawImage(imageBitmap, 0, 0);
+  const imageData = context.getImageData(0, 0, imageBitmap.width, imageBitmap.height);
+  const from = imageData.data;
   const fromWidth = imageBitmap.width;
   const fromHeight = imageBitmap.height;
   const widthRatio = maxDimension / fromWidth;
@@ -388,26 +428,24 @@ async function createResizeMetadata(blob, maxDimension, tileOptions) {
   const toWidth = Math.floor(fromWidth * scaleFactor);
   const toHeight = Math.floor(fromHeight * scaleFactor);
   const stages = createResizeStages(fromWidth, fromHeight, toWidth, toHeight, tileOptions.initialSize, tileOptions.filterPadding);
-  const tileTransforms = createTileTransforms(fromWidth, fromHeight, toWidth, toHeight, tileOptions.initialSize, tileOptions.filterPadding, tileOptions.filter, tileOptions.unsharpAmount, tileOptions.unsharpRadius, tileOptions.unsharpThreshold);
-  const canvas = new OffscreenCanvas(fromWidth, fromHeight);
-  const context = canvas.getContext("2d");
-  if (!context)
-    throw new Error("PicSquish: Canvas context is not supported");
-  context.drawImage(imageBitmap, 0, 0);
-  const imageData = context.getImageData(0, 0, fromWidth, fromHeight);
-  const fromBuffer = new SharedArrayBuffer(imageData.data.byteLength);
-  const fromArray = new Uint8ClampedArray(fromBuffer);
-  fromArray.set(imageData.data);
-  const toBufferSize = toWidth * toHeight * 4;
-  const toBuffer = new SharedArrayBuffer(toBufferSize);
+  const tileTransforms = createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, tileOptions.initialSize, tileOptions.filterPadding, tileOptions.filter, tileOptions.unsharpAmount, tileOptions.unsharpRadius, tileOptions.unsharpThreshold);
   return {
-    from: fromBuffer,
+    from: from.buffer,
     fromWidth,
     fromHeight,
-    to: toBuffer,
     tileTransforms,
     stages
   };
+}
+
+// src/worker/pica/client/placeTransformedTile.ts
+function placeTransformedTile(to, toWidth, tileTransform) {
+  const tile = new Uint8ClampedArray(tileTransform.tile);
+  for (let row = 0;row < tileTransform.toHeight; row++) {
+    const fromStart = row * tileTransform.toWidth * BYTES_PER_PIXEL;
+    const toStart = ((tileTransform.toY + row) * toWidth + tileTransform.toX) * BYTES_PER_PIXEL;
+    to.set(tile.subarray(fromStart, fromStart + tileTransform.toWidth * BYTES_PER_PIXEL), toStart);
+  }
 }
 
 // src/client/task-queue.ts
@@ -451,7 +489,6 @@ class WorkerPool {
       maxDimension: task.data.maxDimension,
       tileOptions: task.data.tileOptions
     };
-    console.log("TASK 1");
     this.#assignTask(worker, task, taskMessage, []);
   }
   assignPriority2Task(worker, task) {
@@ -459,13 +496,9 @@ class WorkerPool {
       taskId: task.id,
       squishId: task.squishId,
       taskType: 1 /* TransformTile */,
-      tileTransform: task.data.tileTransform,
-      from: task.data.from,
-      fromWidth: task.data.fromWidth,
-      to: task.data.to,
-      toWidth: task.data.toWidth
+      tileTransform: task.data.tileTransform
     };
-    this.#assignTask(worker, task, taskMessage, []);
+    this.#assignTask(worker, task, taskMessage, [taskMessage.tileTransform.tile]);
   }
   setWorkerTimeout(worker, duration) {
     const id = setTimeout(() => {
@@ -526,47 +559,41 @@ class TaskQueue {
       const squishContext = this.#squishContexts.get(event.data.squishId);
       if (!squishContext)
         throw new Error("SquishContext not found");
+      if (event.data.error)
+        squishContext.reject(event.data.error);
       if (event.data.taskType === 0 /* CreateResizeMetadata */) {
-        const { squishId, error, output } = event.data;
-        if (error) {
-          squishContext.reject(error);
-        } else {
-          squishContext.from = output.from;
-          squishContext.fromWidth = output.fromWidth;
-          squishContext.fromHeight = output.fromHeight;
-          squishContext.to = output.to;
-          squishContext.toWidth = output.stages[0].toWidth;
-          squishContext.toHeight = output.stages[0].toHeight;
-          squishContext.stages = output.stages;
-          squishContext.remainingTileCount = output.tileTransforms.length;
-          for (const tileTransform of output.tileTransforms) {
-            this.#priority2TaskQueue.push({
-              id: createId(),
-              squishId,
-              data: {
-                tileTransform,
-                from: squishContext.from,
-                fromWidth: squishContext.fromWidth,
-                to: squishContext.to,
-                toWidth: squishContext.toWidth
-              }
-            });
-          }
+        const { squishId, output } = event.data;
+        const toWidth = output.stages[0].toWidth;
+        const toHeight = output.stages[0].toHeight;
+        squishContext.from = new Uint8ClampedArray(output.from);
+        squishContext.fromWidth = output.fromWidth;
+        squishContext.fromHeight = output.fromHeight;
+        squishContext.to = new Uint8ClampedArray(toWidth * toHeight * BYTES_PER_PIXEL);
+        squishContext.toWidth = toWidth;
+        squishContext.toHeight = toHeight;
+        squishContext.stages = output.stages;
+        squishContext.remainingTileCount = output.tileTransforms.length;
+        for (const tileTransform of output.tileTransforms) {
+          this.#priority2TaskQueue.push({
+            id: createId(),
+            squishId,
+            data: {
+              tileTransform
+            }
+          });
         }
       }
       if (event.data.taskType === 1 /* TransformTile */) {
-        const { error } = event.data;
-        if (error) {
-          squishContext.reject(error);
-        } else {
-          squishContext.remainingTileCount--;
-          if (!squishContext.remainingTileCount) {
-            if (!squishContext.to)
-              throw new Error("SquishContext to not found");
-            sharedArrayBufferToImageBitmap(squishContext.to, squishContext.toWidth, squishContext.toHeight).then((imageBitmap) => {
-              squishContext.resolve(imageBitmap);
-            });
-          }
+        const { output } = event.data;
+        if (!squishContext.to)
+          throw new Error("SquishContext to not found");
+        placeTransformedTile(squishContext.to, squishContext.toWidth, output.tileTransform);
+        squishContext.remainingTileCount--;
+        if (!squishContext.remainingTileCount) {
+          const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight);
+          createImageBitmap(imageData).then((imageBitmap) => {
+            squishContext.resolve(imageBitmap);
+          });
         }
       }
       const finishedWorker = this.#workerPool.getWorker(event.data.taskId);
@@ -574,10 +601,6 @@ class TaskQueue {
         this.#workerPool.setWorkerTimeout(finishedWorker, this.#maxIdleTime);
       this.#workerPool.removeTask(event.data.taskId);
       this.#processQueue();
-    };
-    worker.onerror = (error) => {
-      console.log(error.message);
-      console.log(error);
     };
     this.#workerPool.addWorker(worker);
   }
@@ -618,12 +641,6 @@ class TaskQueue {
       this.#processQueue();
     });
   }
-}
-async function sharedArrayBufferToImageBitmap(buffer, width, height) {
-  const sharedArray = new Uint8ClampedArray(buffer);
-  const regularArray = new Uint8ClampedArray(sharedArray);
-  const imageData = new ImageData(regularArray, width, height);
-  return await createImageBitmap(imageData);
 }
 
 // src/worker/pica/worker/mm_resize/resize_filter_info.ts
@@ -985,35 +1002,11 @@ function unsharp(img, width, height, amount, radius, threshold) {
 }
 
 // src/worker/pica/worker/transformTile.ts
-function transformTile(tile, tileTransform) {
-  const resizedTile = resize(tile, tileTransform.filter, tileTransform.width, tileTransform.height, tileTransform.toWidth, tileTransform.toHeight, tileTransform.scaleX, tileTransform.scaleY, tileTransform.offsetX, tileTransform.offsetY);
+function transformTile(tileTransform) {
+  const resizedTile = resize(new Uint8ClampedArray(tileTransform.tile), tileTransform.filter, tileTransform.width, tileTransform.height, tileTransform.toWidth, tileTransform.toHeight, tileTransform.scaleX, tileTransform.scaleY, tileTransform.offsetX, tileTransform.offsetY);
   if (tileTransform.unsharpAmount)
     unsharp(resizedTile, tileTransform.toWidth, tileTransform.toHeight, tileTransform.unsharpAmount, tileTransform.unsharpRadius, tileTransform.unsharpThreshold);
   return resizedTile;
-}
-
-// src/worker/pica/client/placeTransformedTile.ts
-function placeTransformedTile(to, toWidth, tileTransform, transformedTile) {
-  const bytesPerPixel = 4;
-  const toImage = new Uint8ClampedArray(to);
-  for (let row = 0;row < tileTransform.toHeight; row++) {
-    const fromStart = row * tileTransform.toWidth * bytesPerPixel;
-    const toStart = ((tileTransform.toY + row) * toWidth + tileTransform.toX) * bytesPerPixel;
-    toImage.set(transformedTile.subarray(fromStart, fromStart + tileTransform.toWidth * bytesPerPixel), toStart);
-  }
-}
-
-// src/worker/pica/client/extractTile.ts
-function extractTile(from, fromWidth, tileTransform) {
-  const bytesPerPixel = 4;
-  const fullImage = new Uint8ClampedArray(from);
-  const tilePixels = new Uint8ClampedArray(tileTransform.width * tileTransform.height * bytesPerPixel);
-  for (let row = 0;row < tileTransform.height; row++) {
-    const srcStart = ((tileTransform.y + row) * fromWidth + tileTransform.x) * bytesPerPixel;
-    const dstStart = row * tileTransform.width * bytesPerPixel;
-    tilePixels.set(fullImage.subarray(srcStart, srcStart + tileTransform.width * bytesPerPixel), dstStart);
-  }
-  return tilePixels;
 }
 
 // src/worker/worker.ts
@@ -1031,27 +1024,26 @@ self.onmessage = async (event) => {
           from: result.from,
           fromWidth: result.fromWidth,
           fromHeight: result.fromHeight,
-          to: result.to,
           tileTransforms: result.tileTransforms,
           stages: result.stages
         }
       };
-      self.postMessage(taskResult);
+      const tiles = result.tileTransforms.map((tileTransform) => tileTransform.tile);
+      self.postMessage(taskResult, [result.from, ...tiles]);
     }
     if (taskType === 1 /* TransformTile */) {
-      const { tileTransform, from, fromWidth, to, toWidth } = event.data;
-      const tile = extractTile(from, fromWidth, tileTransform);
-      const transformedTile = transformTile(tile, tileTransform);
-      placeTransformedTile(to, toWidth, tileTransform, transformedTile);
+      const { tileTransform } = event.data;
+      tileTransform.tile = transformTile(tileTransform).buffer;
       const taskResult = {
         taskId,
         squishId,
-        taskType
+        taskType,
+        output: { tileTransform }
       };
-      self.postMessage(taskResult);
+      self.postMessage(taskResult, [tileTransform.tile]);
     }
   } catch (error) {
-    self.postMessage({ taskId, error });
+    self.postMessage({ taskId, squishId, taskType, error });
   }
 };
 `;
@@ -1094,7 +1086,6 @@ class WorkerPool {
       maxDimension: task.data.maxDimension,
       tileOptions: task.data.tileOptions
     };
-    console.log("TASK 1");
     this.#assignTask(worker, task, taskMessage, []);
   }
   assignPriority2Task(worker, task) {
@@ -1102,13 +1093,9 @@ class WorkerPool {
       taskId: task.id,
       squishId: task.squishId,
       taskType: 1 /* TransformTile */,
-      tileTransform: task.data.tileTransform,
-      from: task.data.from,
-      fromWidth: task.data.fromWidth,
-      to: task.data.to,
-      toWidth: task.data.toWidth
+      tileTransform: task.data.tileTransform
     };
-    this.#assignTask(worker, task, taskMessage, []);
+    this.#assignTask(worker, task, taskMessage, [taskMessage.tileTransform.tile]);
   }
   setWorkerTimeout(worker, duration) {
     const id = setTimeout(() => {
@@ -1169,47 +1156,41 @@ class TaskQueue {
       const squishContext = this.#squishContexts.get(event.data.squishId);
       if (!squishContext)
         throw new Error("SquishContext not found");
+      if (event.data.error)
+        squishContext.reject(event.data.error);
       if (event.data.taskType === 0 /* CreateResizeMetadata */) {
-        const { squishId, error, output } = event.data;
-        if (error) {
-          squishContext.reject(error);
-        } else {
-          squishContext.from = output.from;
-          squishContext.fromWidth = output.fromWidth;
-          squishContext.fromHeight = output.fromHeight;
-          squishContext.to = output.to;
-          squishContext.toWidth = output.stages[0].toWidth;
-          squishContext.toHeight = output.stages[0].toHeight;
-          squishContext.stages = output.stages;
-          squishContext.remainingTileCount = output.tileTransforms.length;
-          for (const tileTransform of output.tileTransforms) {
-            this.#priority2TaskQueue.push({
-              id: createId(),
-              squishId,
-              data: {
-                tileTransform,
-                from: squishContext.from,
-                fromWidth: squishContext.fromWidth,
-                to: squishContext.to,
-                toWidth: squishContext.toWidth
-              }
-            });
-          }
+        const { squishId, output } = event.data;
+        const toWidth = output.stages[0].toWidth;
+        const toHeight = output.stages[0].toHeight;
+        squishContext.from = new Uint8ClampedArray(output.from);
+        squishContext.fromWidth = output.fromWidth;
+        squishContext.fromHeight = output.fromHeight;
+        squishContext.to = new Uint8ClampedArray(toWidth * toHeight * BYTES_PER_PIXEL);
+        squishContext.toWidth = toWidth;
+        squishContext.toHeight = toHeight;
+        squishContext.stages = output.stages;
+        squishContext.remainingTileCount = output.tileTransforms.length;
+        for (const tileTransform of output.tileTransforms) {
+          this.#priority2TaskQueue.push({
+            id: createId(),
+            squishId,
+            data: {
+              tileTransform
+            }
+          });
         }
       }
       if (event.data.taskType === 1 /* TransformTile */) {
-        const { error } = event.data;
-        if (error) {
-          squishContext.reject(error);
-        } else {
-          squishContext.remainingTileCount--;
-          if (!squishContext.remainingTileCount) {
-            if (!squishContext.to)
-              throw new Error("SquishContext to not found");
-            sharedArrayBufferToImageBitmap(squishContext.to, squishContext.toWidth, squishContext.toHeight).then((imageBitmap) => {
-              squishContext.resolve(imageBitmap);
-            });
-          }
+        const { output } = event.data;
+        if (!squishContext.to)
+          throw new Error("SquishContext to not found");
+        placeTransformedTile(squishContext.to, squishContext.toWidth, output.tileTransform);
+        squishContext.remainingTileCount--;
+        if (!squishContext.remainingTileCount) {
+          const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight);
+          createImageBitmap(imageData).then((imageBitmap) => {
+            squishContext.resolve(imageBitmap);
+          });
         }
       }
       const finishedWorker = this.#workerPool.getWorker(event.data.taskId);
@@ -1217,10 +1198,6 @@ class TaskQueue {
         this.#workerPool.setWorkerTimeout(finishedWorker, this.#maxIdleTime);
       this.#workerPool.removeTask(event.data.taskId);
       this.#processQueue();
-    };
-    worker.onerror = (error) => {
-      console.log(error.message);
-      console.log(error);
     };
     this.#workerPool.addWorker(worker);
   }
@@ -1262,18 +1239,8 @@ class TaskQueue {
     });
   }
 }
-async function sharedArrayBufferToImageBitmap(buffer, width, height) {
-  const sharedArray = new Uint8ClampedArray(buffer);
-  const regularArray = new Uint8ClampedArray(sharedArray);
-  const imageData = new ImageData(regularArray, width, height);
-  return await createImageBitmap(imageData);
-}
 
 // src/client/client.ts
-function isSharedArrayBufferUsable() {
-  return typeof SharedArrayBuffer === "function" && self.crossOriginIsolated === true;
-}
-
 class PicSquish {
   #taskQueue;
   #globalOptions;
@@ -1285,7 +1252,6 @@ class PicSquish {
     this.#globalOptions = options;
   }
   async squish(blob, localOptions) {
-    console.log("SAB", isSharedArrayBufferUsable());
     const combinedOptions = localOptions ? { ...this.#globalOptions, ...localOptions } : this.#globalOptions;
     const maxDimension = combinedOptions.maxDimension;
     const tileSize = combinedOptions.tileSize || 1024;
@@ -1306,8 +1272,6 @@ class PicSquish {
     };
     if (useMainThread) {
       const result = await createResizeMetadata(blob, maxDimension, tileOptions);
-      console.log("here");
-      console.log(result);
       return result;
     }
     return this.#taskQueue.add({ blob, maxDimension, tileOptions });

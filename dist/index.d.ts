@@ -23,6 +23,7 @@ export type ResizeStage = {
     toHeight: number;
 };
 export type TileTransform = {
+    tile: ArrayBuffer;
     toX: number;
     toY: number;
     toWidth: number;
@@ -46,11 +47,11 @@ export type TileTransform = {
     unsharpRadius: number;
     unsharpThreshold: number;
 };
+export declare const BYTES_PER_PIXEL = 4;
 export declare function createResizeMetadata(blob: Blob, maxDimension: number, tileOptions: TileOptions): Promise<{
-    from: SharedArrayBuffer;
+    from: ArrayBufferLike;
     fromWidth: number;
     fromHeight: number;
-    to: SharedArrayBuffer;
     tileTransforms: TileTransform[];
     stages: ResizeStage[];
 }>;

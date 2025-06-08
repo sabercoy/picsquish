@@ -1,20 +1,18 @@
-import { TileTransform } from '../../..'
+import { BYTES_PER_PIXEL, TileTransform } from '../../..'
 
 export function placeTransformedTile(
-  to: SharedArrayBuffer,
+  to: Uint8ClampedArray,
   toWidth: number,
   tileTransform: TileTransform,
-  transformedTile: Uint8Array | Uint8ClampedArray,
 ) {
-  const bytesPerPixel = 4
-  const toImage = new Uint8ClampedArray(to)
+  const tile = new Uint8ClampedArray(tileTransform.tile)
 
   for (let row = 0; row < tileTransform.toHeight; row++) {
-    const fromStart = row * tileTransform.toWidth * bytesPerPixel
-    const toStart = ((tileTransform.toY + row) * toWidth + tileTransform.toX) * bytesPerPixel
+    const fromStart = row * tileTransform.toWidth * BYTES_PER_PIXEL
+    const toStart = ((tileTransform.toY + row) * toWidth + tileTransform.toX) * BYTES_PER_PIXEL
 
-    toImage.set(
-      transformedTile.subarray(fromStart, fromStart + tileTransform.toWidth * bytesPerPixel),
+    to.set(
+      tile.subarray(fromStart, fromStart + tileTransform.toWidth * BYTES_PER_PIXEL),
       toStart,
     )
   }

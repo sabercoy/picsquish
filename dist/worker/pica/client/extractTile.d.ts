@@ -1,2 +1,2 @@
 import { TileTransform } from '../../..';
-export declare function extractTile(from: SharedArrayBuffer, fromWidth: number, tileTransform: TileTransform): Uint8ClampedArray<ArrayBuffer>;
+export declare function extractTile(from: Uint8ClampedArray, fromWidth: number, tileTransform: Omit<TileTransform, 'tile'>): Uint8ClampedArray<ArrayBuffer>;

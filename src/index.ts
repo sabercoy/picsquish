@@ -30,6 +30,7 @@ export type ResizeStage = {
 }
 
 export type TileTransform = {
+  tile: ArrayBuffer
   toX: number
   toY: number
   toWidth: number
@@ -54,12 +55,21 @@ export type TileTransform = {
   unsharpThreshold: number
 }
 
+export const BYTES_PER_PIXEL = 4 // channels: RGBA
+
 export async function createResizeMetadata(
   blob: Blob,
   maxDimension: number,
   tileOptions: TileOptions
 ) {
   const imageBitmap = await createImageBitmap(blob)
+  const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height)
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('Canvas 2D context not supported')
+  context.drawImage(imageBitmap, 0, 0)
+  const imageData = context.getImageData(0, 0, imageBitmap.width, imageBitmap.height)
+  const from = imageData.data
+
   const fromWidth = imageBitmap.width
   const fromHeight = imageBitmap.height
   const widthRatio = maxDimension / fromWidth
@@ -78,6 +88,7 @@ export async function createResizeMetadata(
   )
 
   const tileTransforms = createTileTransforms(
+    from,
     fromWidth,
     fromHeight,
     toWidth,
@@ -90,24 +101,10 @@ export async function createResizeMetadata(
     tileOptions.unsharpThreshold,
   )
 
-  const canvas = new OffscreenCanvas(fromWidth, fromHeight)
-  const context = canvas.getContext('2d')
-  if (!context) throw new Error('PicSquish: Canvas context is not supported')
-  context.drawImage(imageBitmap, 0, 0)
-
-  const imageData = context.getImageData(0, 0, fromWidth, fromHeight)
-  const fromBuffer = new SharedArrayBuffer(imageData.data.byteLength)
-  const fromArray = new Uint8ClampedArray(fromBuffer)
-  fromArray.set(imageData.data)
-
-  const toBufferSize = toWidth * toHeight * 4
-  const toBuffer = new SharedArrayBuffer(toBufferSize)
-
   return {
-    from: fromBuffer,
+    from: from.buffer,
     fromWidth,
     fromHeight,
-    to: toBuffer,
     tileTransforms,
     stages,
   }

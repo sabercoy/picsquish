@@ -1,10 +1,6 @@
 import { createResizeMetadata, Options, TileOptions } from '..'
 import { TaskQueue } from './task-queue'
 
-function isSharedArrayBufferUsable(): boolean {
-  return typeof SharedArrayBuffer === 'function' && self.crossOriginIsolated === true
-}
-
 export class PicSquish {
   #taskQueue: TaskQueue
   #globalOptions: Options
@@ -19,8 +15,6 @@ export class PicSquish {
   }
 
   async squish(blob: Blob, localOptions?: Options) {
-    console.log('SAB', isSharedArrayBufferUsable())
-
     const combinedOptions = localOptions ? { ...this.#globalOptions, ...localOptions } : this.#globalOptions
     const maxDimension = combinedOptions.maxDimension
     const tileSize = combinedOptions.tileSize || 1024
@@ -44,8 +38,6 @@ export class PicSquish {
 
     if (useMainThread) {
       const result = await createResizeMetadata(blob, maxDimension, tileOptions)
-      console.log('here')
-      console.log(result)
       return result
     }
 

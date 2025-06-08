@@ -2,12 +2,9 @@ import { TileTransform } from '../../..'
 import { resize } from './mm_resize/resize'
 import { unsharp as unsharp_mask } from './mm_unsharp_mask/unsharp_mask'
 
-export function transformTile(
-  tile: Uint8ClampedArray<ArrayBufferLike>,
-  tileTransform: TileTransform,
-) {
+export function transformTile(tileTransform: TileTransform) {
   const resizedTile = resize(
-    tile,
+    new Uint8ClampedArray(tileTransform.tile),
     tileTransform.filter,
     tileTransform.width,
     tileTransform.height,

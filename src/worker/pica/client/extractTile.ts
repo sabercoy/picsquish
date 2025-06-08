@@ -1,20 +1,18 @@
-import { TileTransform } from '../../..'
+import { BYTES_PER_PIXEL, TileTransform } from '../../..'
 
 export function extractTile(
-  from: SharedArrayBuffer,
+  from: Uint8ClampedArray,
   fromWidth: number,
-  tileTransform: TileTransform,
+  tileTransform: Omit<TileTransform, 'tile'>,
 ) {
-  const bytesPerPixel = 4
-  const fullImage = new Uint8ClampedArray(from)
-  const tilePixels = new Uint8ClampedArray(tileTransform.width * tileTransform.height * bytesPerPixel)
+  const tilePixels = new Uint8ClampedArray(tileTransform.width * tileTransform.height * BYTES_PER_PIXEL)
 
   for (let row = 0; row < tileTransform.height; row++) {
-    const srcStart = ((tileTransform.y + row) * fromWidth + tileTransform.x) * bytesPerPixel
-    const dstStart = row * tileTransform.width * bytesPerPixel
+    const srcStart = ((tileTransform.y + row) * fromWidth + tileTransform.x) * BYTES_PER_PIXEL
+    const dstStart = row * tileTransform.width * BYTES_PER_PIXEL
 
     tilePixels.set(
-      fullImage.subarray(srcStart, srcStart + tileTransform.width * bytesPerPixel),
+      from.subarray(srcStart, srcStart + tileTransform.width * BYTES_PER_PIXEL),
       dstStart,
     )
   }

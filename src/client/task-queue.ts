@@ -1,4 +1,5 @@
-import { ResizeStage, TileOptions, TileTransform } from '..'
+import { BYTES_PER_PIXEL, ResizeStage, TileOptions, TileTransform } from '..'
+import { placeTransformedTile } from '../worker/pica/client/placeTransformedTile'
 
 const workerCode = '<WORKER_CODE>'
 const workerBlob = new Blob([workerCode], { type: 'application/javascript' })
@@ -19,10 +20,6 @@ type TaskData1 = {
 
 type TaskData2 = {
   tileTransform: TileTransform
-  from: SharedArrayBuffer
-  fromWidth: number
-  to: SharedArrayBuffer
-  toWidth: number
 }
 
 type TaskResult = {
@@ -34,16 +31,19 @@ type TaskResult = {
 
 export type TaskResult1 = TaskResult & {
   output: {
-    from: SharedArrayBuffer
+    from: ArrayBufferLike
     fromWidth: number
     fromHeight: number
-    to: SharedArrayBuffer
     tileTransforms: TileTransform[]
     stages: ResizeStage[]
   }
 }
 
-export type TaskResult2 = TaskResult
+export type TaskResult2 = TaskResult & {
+  output: {
+    tileTransform: TileTransform
+  }
+}
 
 type PendingTask = {
   id: TaskId
@@ -68,10 +68,10 @@ export type TaskMessage1 = TaskMessage & TaskData1
 export type TaskMessage2 = TaskMessage & TaskData2
 
 type SquishContext = {
-  from: SharedArrayBuffer | null
+  from: Uint8ClampedArray | null
   fromWidth: number
   fromHeight: number
-  to: SharedArrayBuffer | null
+  to: Uint8ClampedArray | null
   toWidth: number
   toHeight: number
   stages: ResizeStage[]
@@ -129,7 +129,6 @@ class WorkerPool {
       tileOptions: task.data.tileOptions,
     }
 
-    console.log('TASK 1')
     this.#assignTask(worker, task, taskMessage, [])
   }
 
@@ -139,13 +138,9 @@ class WorkerPool {
       squishId: task.squishId,
       taskType: TaskType.TransformTile,
       tileTransform: task.data.tileTransform,
-      from: task.data.from,
-      fromWidth: task.data.fromWidth,
-      to: task.data.to,
-      toWidth: task.data.toWidth,
     }
 
-    this.#assignTask(worker, task, taskMessage, [])
+    this.#assignTask(worker, task, taskMessage, [taskMessage.tileTransform.tile])
   }
 
   setWorkerTimeout(worker: Worker, duration: number) {
@@ -215,51 +210,46 @@ export class TaskQueue {
     worker.onmessage = (event: MessageEvent<TaskResult>) => {
       const squishContext = this.#squishContexts.get(event.data.squishId)
       if (!squishContext) throw new Error('SquishContext not found')
+      if (event.data.error) squishContext.reject(event.data.error)
 
       if (event.data.taskType === TaskType.CreateResizeMetadata) {
-        const { squishId, error, output } = event.data as TaskResult1
+        const { squishId, output } = event.data as TaskResult1
 
-        if (error) {
-          squishContext.reject(error)
-        } else {
-          squishContext.from = output.from
-          squishContext.fromWidth = output.fromWidth
-          squishContext.fromHeight = output.fromHeight
-          squishContext.to = output.to
-          squishContext.toWidth = output.stages[0].toWidth
-          squishContext.toHeight = output.stages[0].toHeight
-          squishContext.stages = output.stages
-          squishContext.remainingTileCount = output.tileTransforms.length
+        const toWidth = output.stages[0].toWidth
+        const toHeight = output.stages[0].toHeight
 
-          for (const tileTransform of output.tileTransforms) {
-            this.#priority2TaskQueue.push({
-              id: createId(),
-              squishId,
-              data: {
-                tileTransform,
-                from: squishContext.from,
-                fromWidth: squishContext.fromWidth,
-                to: squishContext.to,
-                toWidth: squishContext.toWidth,
-              },
-            })
-          }
+        squishContext.from = new Uint8ClampedArray(output.from)
+        squishContext.fromWidth = output.fromWidth
+        squishContext.fromHeight = output.fromHeight
+        squishContext.to = new Uint8ClampedArray(toWidth * toHeight * BYTES_PER_PIXEL)
+        squishContext.toWidth = toWidth
+        squishContext.toHeight = toHeight
+        squishContext.stages = output.stages
+        squishContext.remainingTileCount = output.tileTransforms.length
+
+        for (const tileTransform of output.tileTransforms) {
+          this.#priority2TaskQueue.push({
+            id: createId(),
+            squishId,
+            data: {
+              tileTransform,
+            },
+          })
         }
       }
 
       if (event.data.taskType === TaskType.TransformTile) {
-        const { error } = event.data as TaskResult2
+        const { output } = event.data as TaskResult2
+        if (!squishContext.to) throw new Error('SquishContext to not found')
 
-        if (error) {
-          squishContext.reject(error)
-        } else {
-          squishContext.remainingTileCount--
-          if (!squishContext.remainingTileCount) {
-            if (!squishContext.to) throw new Error('SquishContext to not found')
-            sharedArrayBufferToImageBitmap(squishContext.to, squishContext.toWidth, squishContext.toHeight).then(imageBitmap => {
-              squishContext.resolve(imageBitmap)
-            })
-          }
+        placeTransformedTile(squishContext.to, squishContext.toWidth, output.tileTransform)
+        squishContext.remainingTileCount--
+
+        if (!squishContext.remainingTileCount) {
+          const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight)
+          createImageBitmap(imageData).then(imageBitmap => {
+            squishContext.resolve(imageBitmap)
+          })
         }
       }
 
@@ -267,12 +257,6 @@ export class TaskQueue {
       if (finishedWorker) this.#workerPool.setWorkerTimeout(finishedWorker, this.#maxIdleTime)
       this.#workerPool.removeTask(event.data.taskId)
       this.#processQueue()
-    }
-
-    worker.onerror = (error) => {
-      // TODO
-      console.log(error.message)
-      console.log(error)
     }
 
     this.#workerPool.addWorker(worker)
@@ -318,15 +302,4 @@ export class TaskQueue {
       this.#processQueue()
     })
   }
-}
-
-async function sharedArrayBufferToImageBitmap(
-  buffer: SharedArrayBuffer,
-  width: number,
-  height: number
-): Promise<ImageBitmap> {
-  const sharedArray = new Uint8ClampedArray(buffer)
-  const regularArray = new Uint8ClampedArray(sharedArray)
-  const imageData = new ImageData(regularArray, width, height)
-  return await createImageBitmap(imageData)
 }

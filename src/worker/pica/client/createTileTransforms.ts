@@ -1,4 +1,5 @@
 import { Filter, TileTransform } from '../../..'
+import { extractTile } from './extractTile'
 
 const PIXEL_EPSILON = 1e-5
 
@@ -19,8 +20,9 @@ function pixelCeil(x: number) {
 }
 
 export function createTileTransforms(
-  width: number,
-  height: number,
+  from: Uint8ClampedArray,
+  fromWidth: number,
+  fromHeight: number,
   toWidth: number,
   toHeight: number,
   initialSize: number,
@@ -30,8 +32,8 @@ export function createTileTransforms(
   unsharpRadius: number,
   unsharpThreshold: number,
 ) {
-  const scaleX = toWidth / width
-  const scaleY = toHeight / height
+  const scaleX = toWidth / fromWidth
+  const scaleY = toHeight / fromHeight
 
   const innerTileWidth = pixelFloor(initialSize * scaleX) - 2 * filterPadding
   const innerTileHeight = pixelFloor(initialSize * scaleY) - 2 * filterPadding
@@ -43,7 +45,7 @@ export function createTileTransforms(
 
   let x, y
   let innerX, innerY, toTileWidth, toTileHeight
-  const tiles: TileTransform[] = []
+  const tileTransforms: TileTransform[] = []
 
   // we go top-to-down instead of left-to-right to make image displayed from top to
   // doesn in the browser
@@ -59,36 +61,36 @@ export function createTileTransforms(
       toTileHeight = innerY + innerTileHeight + filterPadding - y
       if (y + toTileHeight >= toHeight) toTileHeight = toHeight - y
 
-      tiles.push({
+      const tileTransform: Omit<TileTransform, 'tile'> = {
         toX: x,
         toY: y,
         toWidth: toTileWidth,
         toHeight: toTileHeight,
-
         toInnerX: innerX,
         toInnerY: innerY,
         toInnerWidth: innerTileWidth,
         toInnerHeight: innerTileHeight,
-
         offsetX: x / scaleX - pixelFloor(x / scaleX),
         offsetY: y / scaleY - pixelFloor(y / scaleY),
         scaleX: scaleX,
         scaleY: scaleY,
-
         x: pixelFloor(x / scaleX),
         y: pixelFloor(y / scaleY),
         width: pixelCeil(toTileWidth / scaleX),
         height: pixelCeil(toTileHeight / scaleY),
-
         initialSize,
         filterPadding,
         filter,
         unsharpAmount,
         unsharpRadius,
         unsharpThreshold,
-      })
+      }
+
+      const tile = extractTile(from, fromWidth, tileTransform)
+
+      tileTransforms.push({ tile: tile.buffer, ...tileTransform })
     }
   }
 
-  return tiles
+  return tileTransforms
 }

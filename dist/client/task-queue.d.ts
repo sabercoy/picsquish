@@ -12,10 +12,6 @@ type TaskData1 = {
 };
 type TaskData2 = {
     tileTransform: TileTransform;
-    from: SharedArrayBuffer;
-    fromWidth: number;
-    to: SharedArrayBuffer;
-    toWidth: number;
 };
 type TaskResult = {
     taskId: TaskId;
@@ -25,15 +21,18 @@ type TaskResult = {
 };
 export type TaskResult1 = TaskResult & {
     output: {
-        from: SharedArrayBuffer;
+        from: ArrayBufferLike;
         fromWidth: number;
         fromHeight: number;
-        to: SharedArrayBuffer;
         tileTransforms: TileTransform[];
         stages: ResizeStage[];
     };
 };
-export type TaskResult2 = TaskResult;
+export type TaskResult2 = TaskResult & {
+    output: {
+        tileTransform: TileTransform;
+    };
+};
 export type TaskMessage = {
     taskId: TaskId;
     squishId: TaskId;

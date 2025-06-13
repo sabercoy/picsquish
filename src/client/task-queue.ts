@@ -249,6 +249,7 @@ export class TaskQueue {
           const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight)
           createImageBitmap(imageData).then(imageBitmap => {
             squishContext.resolve(imageBitmap)
+            // DELETE SQUISH CONTEXT
           })
         }
       }

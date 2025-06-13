@@ -1,4 +1,6 @@
-import { createResizeMetadata, Options, TileOptions } from '..'
+import { BYTES_PER_PIXEL, createResizeMetadata, Options, ResizedImage, TileOptions } from '..'
+import { placeTransformedTile } from '../worker/pica/client/placeTransformedTile'
+import { transformTile } from '../worker/pica/worker/transformTile'
 import { TaskQueue } from './task-queue'
 
 export class PicSquish {
@@ -12,6 +14,38 @@ export class PicSquish {
 
     this.#taskQueue = new TaskQueue(maxWorkerPoolSize, maxWorkerIdleTime)
     this.#globalOptions = options
+  }
+
+  async #squishOnMainThread(blob: Blob, maxDimension: number, tileOptions: TileOptions) {
+    let resizedImage: ResizedImage | null = null
+    let from: Uint8ClampedArray
+    let fromWidth: number
+    let fromHeight: number
+    let to: Uint8ClampedArray
+    let toWidth: number
+    let toHeight: number
+
+    for (;;) {
+      const metadata = await createResizeMetadata(resizedImage || blob, maxDimension, tileOptions)
+      from = new Uint8ClampedArray(metadata.from)
+      fromWidth = metadata.fromWidth
+      fromHeight = metadata.fromHeight
+      toWidth = metadata.stages[0].toWidth
+      toHeight = metadata.stages[0].toHeight
+      to = new Uint8ClampedArray(toWidth * toHeight * BYTES_PER_PIXEL)
+      
+      for (const tileTransform of metadata.tileTransforms) {
+        tileTransform.tile = transformTile(tileTransform).buffer
+        placeTransformedTile(to, toWidth, tileTransform)
+      }
+
+      metadata.stages.shift()
+      resizedImage = { from: to, fromWidth: toWidth, fromHeight: toHeight, stages: metadata.stages }
+      if (!metadata.stages[0]) break
+    }
+
+    const imageData = new ImageData(resizedImage.from, resizedImage.fromWidth, resizedImage.fromHeight)
+    return await createImageBitmap(imageData)
   }
 
   async squish(blob: Blob, localOptions?: Options) {
@@ -36,10 +70,7 @@ export class PicSquish {
       unsharpThreshold,
     }
 
-    if (useMainThread) {
-      const result = await createResizeMetadata(blob, maxDimension, tileOptions)
-      return result
-    }
+    if (useMainThread) return await this.#squishOnMainThread(blob, maxDimension, tileOptions)
 
     return this.#taskQueue.add({ blob, maxDimension, tileOptions })
   }

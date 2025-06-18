@@ -216,8 +216,6 @@ function createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, in
   const scaleY = toHeight / fromHeight;
   const innerTileWidth = pixelFloor(initialSize * scaleX) - 2 * filterPadding;
   const innerTileHeight = pixelFloor(initialSize * scaleY) - 2 * filterPadding;
-  console.log(from, fromWidth, fromHeight, toWidth, toHeight, initialSize, filterPadding);
-  console.log(innerTileWidth, innerTileHeight);
   if (innerTileWidth < 1 || innerTileHeight < 1) {
     throw new Error("Internal error in picsquish: target tile width/height is too small.");
   }
@@ -271,15 +269,15 @@ function createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, in
 
 // src/index.ts
 var BYTES_PER_PIXEL = 4;
-async function createResizeMetadata(image, maxDimension, tileOptions) {
+async function createResizeMetadata(params) {
   let from;
   let fromWidth;
   let fromHeight;
   let toWidth;
   let toHeight;
   let stages;
-  if (image instanceof Blob) {
-    const imageBitmap = await createImageBitmap(image);
+  if (params.image instanceof Blob) {
+    const imageBitmap = await createImageBitmap(params.image);
     const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
     const context = canvas.getContext("2d");
     if (!context)
@@ -289,21 +287,22 @@ async function createResizeMetadata(image, maxDimension, tileOptions) {
     from = imageData.data;
     fromWidth = imageBitmap.width;
     fromHeight = imageBitmap.height;
-    const widthRatio = maxDimension / fromWidth;
-    const heightRatio = maxDimension / fromHeight;
+    imageBitmap.close();
+    const widthRatio = params.maxDimension / fromWidth;
+    const heightRatio = params.maxDimension / fromHeight;
     const scaleFactor = Math.min(widthRatio, heightRatio, 1);
     const finalToWidth = Math.floor(fromWidth * scaleFactor);
     const finalToHeight = Math.floor(fromHeight * scaleFactor);
-    stages = createResizeStages(fromWidth, fromHeight, finalToWidth, finalToHeight, tileOptions.initialSize, tileOptions.filterPadding);
+    stages = createResizeStages(fromWidth, fromHeight, finalToWidth, finalToHeight, params.tileOptions.initialSize, params.tileOptions.filterPadding);
   } else {
-    from = image.from;
-    fromWidth = image.fromWidth;
-    fromHeight = image.fromHeight;
-    stages = image.stages;
+    from = params.image.from;
+    fromWidth = params.image.fromWidth;
+    fromHeight = params.image.fromHeight;
+    stages = params.image.stages;
   }
   toWidth = stages[0].toWidth;
   toHeight = stages[0].toHeight;
-  const tileTransforms = createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, tileOptions.initialSize, tileOptions.filterPadding, tileOptions.filter, tileOptions.unsharpAmount, tileOptions.unsharpRadius, tileOptions.unsharpThreshold);
+  const tileTransforms = createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, params.tileOptions.initialSize, params.tileOptions.filterPadding, params.tileOptions.filter, params.tileOptions.unsharpAmount, params.tileOptions.unsharpRadius, params.tileOptions.unsharpThreshold);
   return {
     from: from.buffer,
     fromWidth,
@@ -909,8 +908,6 @@ function createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, in
   const scaleY = toHeight / fromHeight;
   const innerTileWidth = pixelFloor(initialSize * scaleX) - 2 * filterPadding;
   const innerTileHeight = pixelFloor(initialSize * scaleY) - 2 * filterPadding;
-  console.log(from, fromWidth, fromHeight, toWidth, toHeight, initialSize, filterPadding);
-  console.log(innerTileWidth, innerTileHeight);
   if (innerTileWidth < 1 || innerTileHeight < 1) {
     throw new Error("Internal error in picsquish: target tile width/height is too small.");
   }
@@ -964,15 +961,15 @@ function createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, in
 
 // src/index.ts
 var BYTES_PER_PIXEL = 4;
-async function createResizeMetadata(image, maxDimension, tileOptions) {
+async function createResizeMetadata(params) {
   let from;
   let fromWidth;
   let fromHeight;
   let toWidth;
   let toHeight;
   let stages;
-  if (image instanceof Blob) {
-    const imageBitmap = await createImageBitmap(image);
+  if (params.image instanceof Blob) {
+    const imageBitmap = await createImageBitmap(params.image);
     const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
     const context = canvas.getContext("2d");
     if (!context)
@@ -982,21 +979,22 @@ async function createResizeMetadata(image, maxDimension, tileOptions) {
     from = imageData.data;
     fromWidth = imageBitmap.width;
     fromHeight = imageBitmap.height;
-    const widthRatio = maxDimension / fromWidth;
-    const heightRatio = maxDimension / fromHeight;
+    imageBitmap.close();
+    const widthRatio = params.maxDimension / fromWidth;
+    const heightRatio = params.maxDimension / fromHeight;
     const scaleFactor = Math.min(widthRatio, heightRatio, 1);
     const finalToWidth = Math.floor(fromWidth * scaleFactor);
     const finalToHeight = Math.floor(fromHeight * scaleFactor);
-    stages = createResizeStages(fromWidth, fromHeight, finalToWidth, finalToHeight, tileOptions.initialSize, tileOptions.filterPadding);
+    stages = createResizeStages(fromWidth, fromHeight, finalToWidth, finalToHeight, params.tileOptions.initialSize, params.tileOptions.filterPadding);
   } else {
-    from = image.from;
-    fromWidth = image.fromWidth;
-    fromHeight = image.fromHeight;
-    stages = image.stages;
+    from = params.image.from;
+    fromWidth = params.image.fromWidth;
+    fromHeight = params.image.fromHeight;
+    stages = params.image.stages;
   }
   toWidth = stages[0].toWidth;
   toHeight = stages[0].toHeight;
-  const tileTransforms = createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, tileOptions.initialSize, tileOptions.filterPadding, tileOptions.filter, tileOptions.unsharpAmount, tileOptions.unsharpRadius, tileOptions.unsharpThreshold);
+  const tileTransforms = createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, params.tileOptions.initialSize, params.tileOptions.filterPadding, params.tileOptions.filter, params.tileOptions.unsharpAmount, params.tileOptions.unsharpRadius, params.tileOptions.unsharpThreshold);
   return {
     from: from.buffer,
     fromWidth,
@@ -1053,7 +1051,7 @@ class WorkerPool {
       taskId: task.id,
       squishId: task.squishId,
       taskType: 0 /* CreateResizeMetadata */,
-      blob: task.data.blob,
+      image: task.data.image,
       maxDimension: task.data.maxDimension,
       tileOptions: task.data.tileOptions
     };
@@ -1122,7 +1120,9 @@ class TaskQueue {
     this.#workerPool = new WorkerPool;
   }
   #createWorker() {
+    const workerUrl = URL.createObjectURL(workerBlob);
     const worker = new Worker(URL.createObjectURL(workerBlob));
+    URL.revokeObjectURL(workerUrl);
     worker.onmessage = (event) => {
       const squishContext = this.#squishContexts.get(event.data.squishId);
       if (!squishContext)
@@ -1149,19 +1149,39 @@ class TaskQueue {
               tileTransform
             }
           });
+          this.#processQueue();
         }
       }
       if (event.data.taskType === 1 /* TransformTile */) {
-        const { output } = event.data;
+        const { taskId, squishId, output } = event.data;
         if (!squishContext.to)
           throw new Error("SquishContext to not found");
         placeTransformedTile(squishContext.to, squishContext.toWidth, output.tileTransform);
         squishContext.remainingTileCount--;
         if (!squishContext.remainingTileCount) {
-          const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight);
-          createImageBitmap(imageData).then((imageBitmap) => {
-            squishContext.resolve(imageBitmap);
-          });
+          squishContext.stages.shift();
+          if (squishContext.stages[0]) {
+            this.#priority1TaskQueue.push({
+              id: taskId,
+              squishId,
+              data: {
+                image: {
+                  from: squishContext.to,
+                  fromWidth: squishContext.toWidth,
+                  fromHeight: squishContext.toHeight,
+                  stages: squishContext.stages
+                },
+                maxDimension: squishContext.maxDimension,
+                tileOptions: squishContext.tileOptions
+              }
+            });
+          } else {
+            const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight);
+            createImageBitmap(imageData).then((imageBitmap) => {
+              this.#squishContexts.delete(event.data.squishId);
+              squishContext.resolve(imageBitmap);
+            });
+          }
         }
       }
       const finishedWorker = this.#workerPool.getWorker(event.data.taskId);
@@ -1190,6 +1210,8 @@ class TaskQueue {
     return new Promise((resolve, reject) => {
       const taskId = createId();
       this.#squishContexts.set(taskId, {
+        maxDimension: taskData.maxDimension,
+        tileOptions: taskData.tileOptions,
         from: null,
         fromWidth: 0,
         fromHeight: 0,
@@ -1582,8 +1604,8 @@ self.onmessage = async (event) => {
   const { taskId, squishId, taskType } = event.data;
   try {
     if (taskType === 0 /* CreateResizeMetadata */) {
-      const { blob, maxDimension, tileOptions } = event.data;
-      const result = await createResizeMetadata(blob, maxDimension, tileOptions);
+      const { image, maxDimension, tileOptions } = event.data;
+      const result = await createResizeMetadata({ image, maxDimension, tileOptions });
       const taskResult = {
         taskId,
         squishId,
@@ -1650,7 +1672,7 @@ class WorkerPool {
       taskId: task.id,
       squishId: task.squishId,
       taskType: 0 /* CreateResizeMetadata */,
-      blob: task.data.blob,
+      image: task.data.image,
       maxDimension: task.data.maxDimension,
       tileOptions: task.data.tileOptions
     };
@@ -1719,7 +1741,9 @@ class TaskQueue {
     this.#workerPool = new WorkerPool;
   }
   #createWorker() {
+    const workerUrl = URL.createObjectURL(workerBlob);
     const worker = new Worker(URL.createObjectURL(workerBlob));
+    URL.revokeObjectURL(workerUrl);
     worker.onmessage = (event) => {
       const squishContext = this.#squishContexts.get(event.data.squishId);
       if (!squishContext)
@@ -1746,19 +1770,39 @@ class TaskQueue {
               tileTransform
             }
           });
+          this.#processQueue();
         }
       }
       if (event.data.taskType === 1 /* TransformTile */) {
-        const { output } = event.data;
+        const { taskId, squishId, output } = event.data;
         if (!squishContext.to)
           throw new Error("SquishContext to not found");
         placeTransformedTile(squishContext.to, squishContext.toWidth, output.tileTransform);
         squishContext.remainingTileCount--;
         if (!squishContext.remainingTileCount) {
-          const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight);
-          createImageBitmap(imageData).then((imageBitmap) => {
-            squishContext.resolve(imageBitmap);
-          });
+          squishContext.stages.shift();
+          if (squishContext.stages[0]) {
+            this.#priority1TaskQueue.push({
+              id: taskId,
+              squishId,
+              data: {
+                image: {
+                  from: squishContext.to,
+                  fromWidth: squishContext.toWidth,
+                  fromHeight: squishContext.toHeight,
+                  stages: squishContext.stages
+                },
+                maxDimension: squishContext.maxDimension,
+                tileOptions: squishContext.tileOptions
+              }
+            });
+          } else {
+            const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight);
+            createImageBitmap(imageData).then((imageBitmap) => {
+              this.#squishContexts.delete(event.data.squishId);
+              squishContext.resolve(imageBitmap);
+            });
+          }
         }
       }
       const finishedWorker = this.#workerPool.getWorker(event.data.taskId);
@@ -1787,6 +1831,8 @@ class TaskQueue {
     return new Promise((resolve, reject) => {
       const taskId = createId();
       this.#squishContexts.set(taskId, {
+        maxDimension: taskData.maxDimension,
+        tileOptions: taskData.tileOptions,
         from: null,
         fromWidth: 0,
         fromHeight: 0,
@@ -1828,7 +1874,7 @@ class PicSquish {
     let toWidth;
     let toHeight;
     for (;; ) {
-      const metadata = await createResizeMetadata(resizedImage || blob, maxDimension, tileOptions);
+      const metadata = await createResizeMetadata({ image: resizedImage || blob, maxDimension, tileOptions });
       from = new Uint8ClampedArray(metadata.from);
       fromWidth = metadata.fromWidth;
       fromHeight = metadata.fromHeight;
@@ -1866,9 +1912,9 @@ class PicSquish {
       unsharpRadius,
       unsharpThreshold
     };
-    if (true)
+    if (useMainThread)
       return await this.#squishOnMainThread(blob, maxDimension, tileOptions);
-    return this.#taskQueue.add({ blob, maxDimension, tileOptions });
+    return this.#taskQueue.add({ image: blob, maxDimension, tileOptions });
   }
 }
 export {

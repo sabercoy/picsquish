@@ -7,8 +7,8 @@ self.onmessage = async (event: MessageEvent<TaskMessage>) => {
 
   try {
     if (taskType === TaskType.CreateResizeMetadata) {
-      const { blob, maxDimension, tileOptions } = event.data as TaskMessage1
-      const result = await createResizeMetadata(blob, maxDimension, tileOptions)
+      const { image, maxDimension, tileOptions } = event.data as TaskMessage1
+      const result = await createResizeMetadata({ image, maxDimension, tileOptions })
       
       const taskResult: TaskResult1 = {
         taskId,

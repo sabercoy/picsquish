@@ -1,4 +1,4 @@
-import { BYTES_PER_PIXEL, ResizeStage, TileOptions, TileTransform } from '..'
+import { BYTES_PER_PIXEL, ResizedImage, ResizeStage, TileOptions, TileTransform } from '..'
 import { placeTransformedTile } from '../worker/pica/client/placeTransformedTile'
 
 const workerCode = '<WORKER_CODE>'
@@ -13,7 +13,7 @@ export enum TaskType {
 }
 
 type TaskData1 = {
-  blob: Blob
+  image: Blob | ResizedImage
   maxDimension: number
   tileOptions: TileOptions
 }
@@ -68,6 +68,8 @@ export type TaskMessage1 = TaskMessage & TaskData1
 export type TaskMessage2 = TaskMessage & TaskData2
 
 type SquishContext = {
+  maxDimension: TaskData1['maxDimension']
+  tileOptions: TaskData1['tileOptions']
   from: Uint8ClampedArray | null
   fromWidth: number
   fromHeight: number
@@ -124,7 +126,7 @@ class WorkerPool {
       taskId: task.id,
       squishId: task.squishId,
       taskType: TaskType.CreateResizeMetadata,
-      blob: task.data.blob,
+      image: task.data.image,
       maxDimension: task.data.maxDimension,
       tileOptions: task.data.tileOptions,
     }
@@ -205,7 +207,9 @@ export class TaskQueue {
   }
 
   #createWorker() {
+    const workerUrl = URL.createObjectURL(workerBlob)
     const worker = new Worker(URL.createObjectURL(workerBlob))
+    URL.revokeObjectURL(workerUrl)
 
     worker.onmessage = (event: MessageEvent<TaskResult>) => {
       const squishContext = this.#squishContexts.get(event.data.squishId)
@@ -235,22 +239,41 @@ export class TaskQueue {
               tileTransform,
             },
           })
+          this.#processQueue()
         }
       }
 
       if (event.data.taskType === TaskType.TransformTile) {
-        const { output } = event.data as TaskResult2
+        const { taskId, squishId, output } = event.data as TaskResult2
         if (!squishContext.to) throw new Error('SquishContext to not found')
 
         placeTransformedTile(squishContext.to, squishContext.toWidth, output.tileTransform)
         squishContext.remainingTileCount--
 
         if (!squishContext.remainingTileCount) {
-          const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight)
-          createImageBitmap(imageData).then(imageBitmap => {
-            squishContext.resolve(imageBitmap)
-            // DELETE SQUISH CONTEXT
-          })
+          squishContext.stages.shift()
+          if (squishContext.stages[0]) {
+            this.#priority1TaskQueue.push({
+              id: taskId,
+              squishId,
+              data: {
+                image: {
+                  from: squishContext.to,
+                  fromWidth: squishContext.toWidth,
+                  fromHeight: squishContext.toHeight,
+                  stages: squishContext.stages,
+                },
+                maxDimension: squishContext.maxDimension,
+                tileOptions: squishContext.tileOptions
+              },
+            })
+          } else {
+            const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight)
+            createImageBitmap(imageData).then(imageBitmap => {
+              this.#squishContexts.delete(event.data.squishId)
+              squishContext.resolve(imageBitmap)
+            })
+          }
         }
       }
 
@@ -282,6 +305,8 @@ export class TaskQueue {
     return new Promise<ImageBitmap>((resolve, reject) => {
       const taskId = createId()
       this.#squishContexts.set(taskId, {
+        maxDimension: taskData.maxDimension,
+        tileOptions: taskData.tileOptions,
         from: null,
         fromWidth: 0,
         fromHeight: 0,

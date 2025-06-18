@@ -1,4 +1,4 @@
-import { ResizeStage, TileOptions, TileTransform } from '..';
+import { ResizedImage, ResizeStage, TileOptions, TileTransform } from '..';
 type TaskId = number;
 export declare enum TaskType {
     CreateResizeMetadata = 0,
@@ -6,7 +6,7 @@ export declare enum TaskType {
     FinalizeImage = 2
 }
 type TaskData1 = {
-    blob: Blob;
+    image: Blob | ResizedImage;
     maxDimension: number;
     tileOptions: TileOptions;
 };

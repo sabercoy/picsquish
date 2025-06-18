@@ -47,19 +47,22 @@ export type TileTransform = {
     unsharpRadius: number;
     unsharpThreshold: number;
 };
-type OriginalImage = Blob;
 export type ResizedImage = {
     from: Uint8ClampedArray;
     fromWidth: number;
     fromHeight: number;
     stages: ResizeStage[];
 };
+export type CreateResizeMetadataParams = {
+    image: Blob | ResizedImage;
+    maxDimension: number;
+    tileOptions: TileOptions;
+};
 export declare const BYTES_PER_PIXEL = 4;
-export declare function createResizeMetadata(image: OriginalImage | ResizedImage, maxDimension: number, tileOptions: TileOptions): Promise<{
+export declare function createResizeMetadata(params: CreateResizeMetadataParams): Promise<{
     from: ArrayBufferLike;
     fromWidth: number;
     fromHeight: number;
     tileTransforms: TileTransform[];
     stages: ResizeStage[];
 }>;
-export {};

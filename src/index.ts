@@ -55,8 +55,6 @@ export type TileTransform = {
   unsharpThreshold: number
 }
 
-type OriginalImage = Blob
-
 export type ResizedImage = {
   from: Uint8ClampedArray
   fromWidth: number
@@ -64,13 +62,15 @@ export type ResizedImage = {
   stages: ResizeStage[]
 }
 
+export type CreateResizeMetadataParams = {
+  image: Blob | ResizedImage
+  maxDimension: number
+  tileOptions: TileOptions
+}
+
 export const BYTES_PER_PIXEL = 4 // channels: RGBA
 
-export async function createResizeMetadata(
-  image: OriginalImage | ResizedImage,
-  maxDimension: number,
-  tileOptions: TileOptions,
-) {
+export async function createResizeMetadata(params: CreateResizeMetadataParams) {
   let from: Uint8ClampedArray
   let fromWidth: number
   let fromHeight: number
@@ -78,8 +78,8 @@ export async function createResizeMetadata(
   let toHeight: number
   let stages: ResizeStage[]
 
-  if (image instanceof Blob) {
-    const imageBitmap = await createImageBitmap(image)
+  if (params.image instanceof Blob) {
+    const imageBitmap = await createImageBitmap(params.image)
     const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height)
     const context = canvas.getContext('2d')
     if (!context) throw new Error('Canvas 2D context not supported')
@@ -88,8 +88,9 @@ export async function createResizeMetadata(
     from = imageData.data
     fromWidth = imageBitmap.width
     fromHeight = imageBitmap.height
-    const widthRatio = maxDimension / fromWidth
-    const heightRatio = maxDimension / fromHeight
+    imageBitmap.close()
+    const widthRatio = params.maxDimension / fromWidth
+    const heightRatio = params.maxDimension / fromHeight
     const scaleFactor = Math.min(widthRatio, heightRatio, 1) // 1 to not scale it up
     const finalToWidth = Math.floor(fromWidth * scaleFactor)
     const finalToHeight = Math.floor(fromHeight * scaleFactor)
@@ -98,14 +99,14 @@ export async function createResizeMetadata(
       fromHeight,
       finalToWidth,
       finalToHeight,
-      tileOptions.initialSize,
-      tileOptions.filterPadding,
+      params.tileOptions.initialSize,
+      params.tileOptions.filterPadding,
     )
   } else {
-    from = image.from
-    fromWidth = image.fromWidth
-    fromHeight = image.fromHeight
-    stages = image.stages
+    from = params.image.from
+    fromWidth = params.image.fromWidth
+    fromHeight = params.image.fromHeight
+    stages = params.image.stages
   }
 
   toWidth = stages[0].toWidth
@@ -117,12 +118,12 @@ export async function createResizeMetadata(
     fromHeight,
     toWidth,
     toHeight,
-    tileOptions.initialSize,
-    tileOptions.filterPadding,
-    tileOptions.filter,
-    tileOptions.unsharpAmount,
-    tileOptions.unsharpRadius,
-    tileOptions.unsharpThreshold,
+    params.tileOptions.initialSize,
+    params.tileOptions.filterPadding,
+    params.tileOptions.filter,
+    params.tileOptions.unsharpAmount,
+    params.tileOptions.unsharpRadius,
+    params.tileOptions.unsharpThreshold,
   )
 
   return {

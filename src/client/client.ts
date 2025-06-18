@@ -10,7 +10,7 @@ export class PicSquish {
   constructor(options: Options) {
     const hardwareConcurrency = typeof navigator === 'undefined' ? 1 : navigator.hardwareConcurrency
     const maxWorkerPoolSize = options.maxWorkerPoolSize || Math.min(hardwareConcurrency, 4)
-    const maxWorkerIdleTime = options.maxWorkerIdleTime || 10000
+    const maxWorkerIdleTime = options.maxWorkerIdleTime || 2000
 
     this.#taskQueue = new TaskQueue(maxWorkerPoolSize, maxWorkerIdleTime)
     this.#globalOptions = options
@@ -26,7 +26,7 @@ export class PicSquish {
     let toHeight: number
 
     for (;;) {
-      const metadata = await createResizeMetadata(resizedImage || blob, maxDimension, tileOptions)
+      const metadata = await createResizeMetadata({ image: resizedImage || blob, maxDimension, tileOptions })
       from = new Uint8ClampedArray(metadata.from)
       fromWidth = metadata.fromWidth
       fromHeight = metadata.fromHeight
@@ -72,6 +72,6 @@ export class PicSquish {
 
     if (useMainThread) return await this.#squishOnMainThread(blob, maxDimension, tileOptions)
 
-    return this.#taskQueue.add({ blob, maxDimension, tileOptions })
+    return this.#taskQueue.add({ image: blob, maxDimension, tileOptions })
   }
 }

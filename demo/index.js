@@ -71,7 +71,7 @@ imageUploadMainThread.addEventListener('change', async (event) => {
   }))
 })
 
-const p = pica({ features: ['js'] })
+const p = pica({ features: ['js', 'ww'] })
 const createResizedPicaCanvas = (originalImageElement, maxDimension) => new Promise((resolve, reject) => {
   createResizedCanvas(originalImageElement, maxDimension)
   .then(canvas => p.resize(originalImageElement, canvas))

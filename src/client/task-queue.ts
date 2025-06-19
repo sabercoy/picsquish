@@ -208,7 +208,7 @@ export class TaskQueue {
 
   #createWorker() {
     const workerUrl = URL.createObjectURL(workerBlob)
-    const worker = new Worker(URL.createObjectURL(workerBlob))
+    const worker = new Worker(workerUrl)
     URL.revokeObjectURL(workerUrl)
 
     worker.onmessage = (event: MessageEvent<TaskResult>) => {

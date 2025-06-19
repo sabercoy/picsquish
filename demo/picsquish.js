@@ -1121,7 +1121,7 @@ class TaskQueue {
   }
   #createWorker() {
     const workerUrl = URL.createObjectURL(workerBlob);
-    const worker = new Worker(URL.createObjectURL(workerBlob));
+    const worker = new Worker(workerUrl);
     URL.revokeObjectURL(workerUrl);
     worker.onmessage = (event) => {
       const squishContext = this.#squishContexts.get(event.data.squishId);
@@ -1742,7 +1742,7 @@ class TaskQueue {
   }
   #createWorker() {
     const workerUrl = URL.createObjectURL(workerBlob);
-    const worker = new Worker(URL.createObjectURL(workerBlob));
+    const worker = new Worker(workerUrl);
     URL.revokeObjectURL(workerUrl);
     worker.onmessage = (event) => {
       const squishContext = this.#squishContexts.get(event.data.squishId);
@@ -1861,7 +1861,7 @@ class PicSquish {
   constructor(options) {
     const hardwareConcurrency = typeof navigator === "undefined" ? 1 : navigator.hardwareConcurrency;
     const maxWorkerPoolSize = options.maxWorkerPoolSize || Math.min(hardwareConcurrency, 4);
-    const maxWorkerIdleTime = options.maxWorkerIdleTime || 1e4;
+    const maxWorkerIdleTime = options.maxWorkerIdleTime || 2000;
     this.#taskQueue = new TaskQueue(maxWorkerPoolSize, maxWorkerIdleTime);
     this.#globalOptions = options;
   }

@@ -1,6 +1,7 @@
-import { BYTES_PER_PIXEL, createResizeMetadata, Options, ResizedImage, TileOptions } from '..'
-import { placeTransformedTile } from '../worker/pica/client/placeTransformedTile'
-import { transformTile } from '../worker/pica/worker/transformTile'
+import { BYTES_PER_PIXEL, Options, ResizedImage, TileOptions } from '..'
+import { createResizeMetadata } from '../worker/createResizeMetadata'
+import { placeTransformedTile } from '../worker/placeTransformedTile'
+import { transformTile } from '../worker/transformTile'
 import { TaskQueue } from './task-queue'
 
 export class PicSquish {

@@ -1,4 +1,4 @@
-import { BYTES_PER_PIXEL, TileTransform } from '../../..'
+import { BYTES_PER_PIXEL, TileTransform } from '..'
 
 export function placeTransformedTile(
   to: Uint8ClampedArray,

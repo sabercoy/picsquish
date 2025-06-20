@@ -59,10 +59,3 @@ export type CreateResizeMetadataParams = {
     tileOptions: TileOptions;
 };
 export declare const BYTES_PER_PIXEL = 4;
-export declare function createResizeMetadata(params: CreateResizeMetadataParams): Promise<{
-    from: ArrayBufferLike;
-    fromWidth: number;
-    fromHeight: number;
-    tileTransforms: TileTransform[];
-    stages: ResizeStage[];
-}>;

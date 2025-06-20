@@ -1,5 +1,5 @@
 
-import { Filter } from '../../../..'
+import { Filter } from '../..'
 import { resizeFilterGen as createFilters } from './resize_filter_gen'
 import { convolveHor, convolveVert, convolveHorWithPre, convolveVertWithPre } from './convolve'
 

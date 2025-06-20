@@ -1,4 +1,4 @@
-import { Filter } from '../../../..';
+import { Filter } from '../..';
 type FilterValue = {
     win: number;
     fn: (x: number) => number;

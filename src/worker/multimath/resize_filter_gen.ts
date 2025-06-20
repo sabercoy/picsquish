@@ -8,7 +8,7 @@
 // - data - filter values sequence
 //
 
-import { Filter } from '../../../..'
+import { Filter } from '../..'
 import { FILTER_MAP } from './resize_filter_info'
 
 // Precision of fixed FP values

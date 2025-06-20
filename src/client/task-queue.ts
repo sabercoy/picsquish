@@ -1,5 +1,5 @@
 import { BYTES_PER_PIXEL, ResizedImage, ResizeStage, TileOptions, TileTransform } from '..'
-import { placeTransformedTile } from '../worker/pica/client/placeTransformedTile'
+import { placeTransformedTile } from '../worker/placeTransformedTile'
 
 const workerCode = '<WORKER_CODE>'
 const workerBlob = new Blob([workerCode], { type: 'application/javascript' })

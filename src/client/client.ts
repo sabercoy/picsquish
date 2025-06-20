@@ -8,13 +8,13 @@ export class PicSquish {
   #taskQueue: TaskQueue
   #globalOptions: Options
 
-  constructor(options: Options) {
+  constructor(globalOptions: Options) {
     const hardwareConcurrency = typeof navigator === 'undefined' ? 1 : navigator.hardwareConcurrency
-    const maxWorkerPoolSize = options.maxWorkerPoolSize || Math.min(hardwareConcurrency, 4)
-    const maxWorkerIdleTime = options.maxWorkerIdleTime || 2000
+    const maxWorkerPoolSize = globalOptions.maxWorkerPoolSize || Math.min(hardwareConcurrency, 4)
+    const maxWorkerIdleTime = globalOptions.maxWorkerIdleTime || 2000
 
     this.#taskQueue = new TaskQueue(maxWorkerPoolSize, maxWorkerIdleTime)
-    this.#globalOptions = options
+    this.#globalOptions = globalOptions
   }
 
   async #squishOnMainThread(blob: Blob, maxDimension: number, tileOptions: TileOptions) {

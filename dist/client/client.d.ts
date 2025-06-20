@@ -1,6 +1,6 @@
 import { Options } from '..';
 export declare class PicSquish {
     #private;
-    constructor(options: Options);
+    constructor(globalOptions: Options);
     squish(blob: Blob, localOptions?: Options): Promise<ImageBitmap>;
 }

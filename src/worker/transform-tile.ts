@@ -1,6 +1,6 @@
 import { TileTransform } from '../common'
 import { resize } from './multimath/resize'
-import { unsharp as unsharp_mask } from './multimath/unsharp_mask'
+import { unsharp as unsharp_mask } from './multimath/unsharp-mask'
 
 export function transformTile(tileTransform: TileTransform) {
   const resizedTile = resize(

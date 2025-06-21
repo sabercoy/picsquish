@@ -1,5 +1,5 @@
 import { BYTES_PER_PIXEL, WORKER_FILE_NAME, ResizedImage, ResizeStage, TileOptions, TileTransform, TaskType } from '../common'
-import { placeTile } from './placeTile'
+import { placeTile } from './place-tile'
 
 type TaskId = number
 

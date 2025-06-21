@@ -9,7 +9,7 @@
 //
 
 import { Filter } from '../../common'
-import { FILTER_MAP } from './resize_filter_info'
+import { FILTER_MAP } from './resize-filter-info'
 
 // Precision of fixed FP values
 const FIXED_FRAC_BITS = 14

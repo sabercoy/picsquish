@@ -1,6 +1,6 @@
 
 import { Filter } from '../../common'
-import { resizeFilterGen as createFilters } from './resize_filter_gen'
+import { resizeFilterGen as createFilters } from './resize-filter-gen'
 import { convolveHor, convolveVert, convolveHorWithPre, convolveVertWithPre } from './convolve'
 
 function hasAlpha(

@@ -170,7 +170,7 @@ var require_glur = __commonJS((exports, module) => {
 var WORKER_FILE_NAME = "picsquish-worker";
 var BYTES_PER_PIXEL = 4;
 
-// src/worker/createResizeStages.ts
+// src/worker/create-resize-stages.ts
 var MIN_INNER_TILE_SIZE = 2;
 function createResizeStages(fromWidth, fromHeight, toWidth, toHeight, initialTileSize, filterPadding) {
   const scaleX = toWidth / fromWidth;
@@ -190,7 +190,7 @@ function createResizeStages(fromWidth, fromHeight, toWidth, toHeight, initialTil
   return stages;
 }
 
-// src/worker/extractTile.ts
+// src/worker/extract-tile.ts
 function extractTile(from, fromWidth, tileTransform) {
   const tilePixels = new Uint8ClampedArray(tileTransform.width * tileTransform.height * BYTES_PER_PIXEL);
   for (let row = 0;row < tileTransform.height; row++) {
@@ -201,7 +201,7 @@ function extractTile(from, fromWidth, tileTransform) {
   return tilePixels;
 }
 
-// src/worker/createTileTransforms.ts
+// src/worker/create-tile-transforms.ts
 var PIXEL_EPSILON = 0.00001;
 function pixelFloor(x) {
   let nearest = Math.round(x);
@@ -271,7 +271,7 @@ function createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, in
   return tileTransforms;
 }
 
-// src/worker/createResizeMetadata.ts
+// src/worker/create-resize-metadata.ts
 async function createResizeMetadata(params) {
   let from;
   let fromWidth;
@@ -315,7 +315,7 @@ async function createResizeMetadata(params) {
   };
 }
 
-// src/main/placeTile.ts
+// src/main/place-tile.ts
 function placeTile(to, toWidth, tileTransform) {
   const tile = new Uint8ClampedArray(tileTransform.tile);
   for (let row = 0;row < tileTransform.toHeight; row++) {
@@ -325,7 +325,7 @@ function placeTile(to, toWidth, tileTransform) {
   }
 }
 
-// src/worker/multimath/resize_filter_info.ts
+// src/worker/multimath/resize-filter-info.ts
 var FILTER_MAP = {
   box: {
     win: 0.5,
@@ -390,7 +390,7 @@ var FILTER_MAP = {
   }
 };
 
-// src/worker/multimath/resize_filter_gen.ts
+// src/worker/multimath/resize-filter-gen.ts
 var FIXED_FRAC_BITS = 14;
 function toFixedPoint(num) {
   return Math.round(num * ((1 << FIXED_FRAC_BITS) - 1));
@@ -636,7 +636,7 @@ function resize(tile, filter, tileWidth, tileHeight, tileToWidth, tileToHeight, 
   return dest;
 }
 
-// src/worker/multimath/unsharp_mask.ts
+// src/worker/multimath/unsharp-mask.ts
 var import_glur = __toESM(require_glur(), 1);
 function hsv_v16(img, width, height) {
   let size = width * height;
@@ -683,7 +683,7 @@ function unsharp(img, width, height, amount, radius, threshold) {
   }
 }
 
-// src/worker/transformTile.ts
+// src/worker/transform-tile.ts
 function transformTile(tileTransform) {
   const resizedTile = resize(new Uint8ClampedArray(tileTransform.tile), tileTransform.filter, tileTransform.width, tileTransform.height, tileTransform.toWidth, tileTransform.toHeight, tileTransform.scaleX, tileTransform.scaleY, tileTransform.offsetX, tileTransform.offsetY);
   if (tileTransform.unsharpAmount)

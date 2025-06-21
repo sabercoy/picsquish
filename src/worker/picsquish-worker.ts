@@ -1,7 +1,7 @@
 import { TaskType } from '../common'
-import { createResizeMetadata } from './createResizeMetadata'
+import { createResizeMetadata } from './create-resize-metadata'
 import { TaskMessage, TaskMessage1, TaskMessage2, TaskResult1, TaskResult2 } from '../main/task-queue'
-import { transformTile } from './transformTile'
+import { transformTile } from './transform-tile'
 
 self.onmessage = async (event: MessageEvent<TaskMessage>) => {
   const { taskId, squishId, taskType } = event.data

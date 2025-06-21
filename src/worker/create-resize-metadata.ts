@@ -1,5 +1,5 @@
-import { createResizeStages } from './createResizeStages'
-import { createTileTransforms } from './createTileTransforms'
+import { createResizeStages } from './create-resize-stages'
+import { createTileTransforms } from './create-tile-transforms'
 import { CreateResizeMetadataParams, ResizeStage } from '../common'
 
 export async function createResizeMetadata(params: CreateResizeMetadataParams) {

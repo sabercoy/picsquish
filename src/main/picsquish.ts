@@ -1,7 +1,7 @@
 import { BYTES_PER_PIXEL, Options, ResizedImage, TileOptions } from '../common'
-import { createResizeMetadata } from '../worker/createResizeMetadata'
-import { placeTile } from './placeTile'
-import { transformTile } from '../worker/transformTile'
+import { createResizeMetadata } from '../worker/create-resize-metadata'
+import { placeTile } from './place-tile'
+import { transformTile } from '../worker/transform-tile'
 import { TaskQueue } from './task-queue'
 
 export class PicSquish {

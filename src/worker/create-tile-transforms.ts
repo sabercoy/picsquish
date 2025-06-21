@@ -1,5 +1,5 @@
 import { Filter, TileTransform } from '../common'
-import { extractTile } from './extractTile'
+import { extractTile } from './extract-tile'
 
 const PIXEL_EPSILON = 1e-5
 

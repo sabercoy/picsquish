@@ -1,6 +1,6 @@
 import { BYTES_PER_PIXEL, Options, ResizedImage, TileOptions } from '../common'
 import { createResizeMetadata } from '../worker/createResizeMetadata'
-import { placeTile } from '../worker/placeTile'
+import { placeTile } from './placeTile'
 import { transformTile } from '../worker/transformTile'
 import { TaskQueue } from './task-queue'
 

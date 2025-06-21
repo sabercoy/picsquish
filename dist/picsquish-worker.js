@@ -166,6 +166,9 @@ var require_glur = __commonJS((exports, module) => {
   module.exports = blurRGBA;
 });
 
+// src/common.ts
+var BYTES_PER_PIXEL = 4;
+
 // src/worker/createResizeStages.ts
 var MIN_INNER_TILE_SIZE = 2;
 function createResizeStages(fromWidth, fromHeight, toWidth, toHeight, initialTileSize, filterPadding) {
@@ -185,9 +188,6 @@ function createResizeStages(fromWidth, fromHeight, toWidth, toHeight, initialTil
   }
   return stages;
 }
-
-// src/common.ts
-var BYTES_PER_PIXEL = 4;
 
 // src/worker/extractTile.ts
 function extractTile(from, fromWidth, tileTransform) {

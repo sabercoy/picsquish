@@ -1,5 +1,5 @@
-import { BYTES_PER_PIXEL, ResizedImage, ResizeStage, TileOptions, TileTransform, TaskType } from '../common'
-import { placeTile } from '../worker/placeTile'
+import { BYTES_PER_PIXEL, WORKER_FILE_NAME, ResizedImage, ResizeStage, TileOptions, TileTransform, TaskType } from '../common'
+import { placeTile } from './placeTile'
 
 type TaskId = number
 
@@ -198,7 +198,7 @@ export class TaskQueue {
   }
 
   #createWorker() {
-    const worker = new Worker(new URL('./picsquish-worker.js', import.meta.url))
+    const worker = new Worker(new URL(`./${WORKER_FILE_NAME}.js`, import.meta.url))
 
     worker.onmessage = (event: MessageEvent<TaskResult>) => {
       const squishContext = this.#squishContexts.get(event.data.squishId)

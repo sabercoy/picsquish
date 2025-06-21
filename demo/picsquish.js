@@ -167,6 +167,7 @@ var require_glur = __commonJS((exports, module) => {
 });
 
 // src/common.ts
+var WORKER_FILE_NAME = "picsquish-worker";
 var BYTES_PER_PIXEL = 4;
 
 // src/worker/createResizeStages.ts
@@ -314,7 +315,7 @@ async function createResizeMetadata(params) {
   };
 }
 
-// src/worker/placeTile.ts
+// src/main/placeTile.ts
 function placeTile(to, toWidth, tileTransform) {
   const tile = new Uint8ClampedArray(tileTransform.tile);
   for (let row = 0;row < tileTransform.toHeight; row++) {
@@ -794,7 +795,7 @@ class TaskQueue {
     this.#workerPool = new WorkerPool;
   }
   #createWorker() {
-    const worker = new Worker(new URL("./picsquish-worker.js", import.meta.url));
+    const worker = new Worker(new URL(`./${WORKER_FILE_NAME}.js`, import.meta.url));
     worker.onmessage = (event) => {
       const squishContext = this.#squishContexts.get(event.data.squishId);
       if (!squishContext)

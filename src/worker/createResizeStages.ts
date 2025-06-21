@@ -11,7 +11,7 @@
 // quality algorithms for first stages.
 //
 
-import { ResizeStage } from '..'
+import { ResizeStage } from '../common'
 
 // min size = 0 results in infinite loop,
 // min size = 1 can consume large amount of memory

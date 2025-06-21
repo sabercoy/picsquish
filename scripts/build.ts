@@ -1,83 +1,49 @@
 import { $ } from 'bun'
-
-const clientFileName = 'client'
-const workerFileName = 'worker'
-const finalFileName = 'picsquish'
+import { MAIN_FILE_NAME, WORKER_FILE_NAME, DEMO_PATH, FINAL_PATH } from '../src/common'
 
 await $`rm -rf ./dist`
 
 await Bun.build({
-  entrypoints: [`./src/worker/${workerFileName}.ts`],
-  outdir: './dist',
-  naming: `${workerFileName}.js`,
+  entrypoints: [`./src/main/${MAIN_FILE_NAME}.ts`],
+  outdir: `./${FINAL_PATH}`,
+  naming: `${MAIN_FILE_NAME}.js`,
   target: 'browser',
 })
 
 await Bun.build({
-  entrypoints: [`./src/worker/${workerFileName}.ts`],
-  outdir: './dist',
-  naming: `${workerFileName}.min.js`,
+  entrypoints: [`./src/main/${MAIN_FILE_NAME}.ts`],
+  outdir: `./${FINAL_PATH}`,
+  naming: `${MAIN_FILE_NAME}.min.js`,
   target: 'browser',
   minify: true,
 })
 
 await Bun.build({
-  entrypoints: [`./src/client/${clientFileName}.ts`],
-  outdir: './dist',
-  naming: `${clientFileName}.js`,
+  entrypoints: [`./src/worker/${WORKER_FILE_NAME}.ts`],
+  outdir: `./${FINAL_PATH}`,
+  naming: `${WORKER_FILE_NAME}.js`,
   target: 'browser',
 })
 
 await Bun.build({
-  entrypoints: [`./src/client/${clientFileName}.ts`],
-  outdir: './dist',
-  naming: `${clientFileName}.min.js`,
+  entrypoints: [`./src/worker/${WORKER_FILE_NAME}.ts`],
+  outdir: `./${FINAL_PATH}`,
+  naming: `${WORKER_FILE_NAME}.min.js`,
   target: 'browser',
   minify: true,
 })
 
 const path = (relativePath: string) => new URL(relativePath, import.meta.url).pathname
 
-const clientBundlePath = path(`../dist/${clientFileName}.js`)
-const workerBundlePath = path(`../dist/${workerFileName}.js`)
-const clientMinifiedPath = path(`../dist/${clientFileName}.min.js`)
-const workerMinifiedPath = path(`../dist/${workerFileName}.min.js`)
-const finalBundlePath = path(`../dist/${finalFileName}.js`)
-const finalMinifiedPath = path(`../dist/${finalFileName}.min.js`)
-const demoPath = path(`../demo/${finalFileName}.js`)
+const mainBundlePath = path(`../${FINAL_PATH}/${MAIN_FILE_NAME}.js`)
+const workerBundlePath = path(`../${FINAL_PATH}/${WORKER_FILE_NAME}.js`)
+const demoMainBundlePath = path(`../${DEMO_PATH}/${MAIN_FILE_NAME}.js`)
+const demoWorkerBundlePath = path(`../${DEMO_PATH}/${WORKER_FILE_NAME}.js`)
 
-const clientBundledCode = await Bun.file(clientBundlePath).text()
+const mainBundledCode = await Bun.file(mainBundlePath).text()
 const workerBundledCode = await Bun.file(workerBundlePath).text()
-const clientMinifiedCode = await Bun.file(clientMinifiedPath).text()
-const workerMinifiedCode = await Bun.file(workerMinifiedPath).text()
 
-const escapedWorkerBundledCode = escapeWorkerCode(workerBundledCode)
-const escapedWorkerMinifiedCode = escapeWorkerCode(workerMinifiedCode)
-
-const finalBundledCode = clientBundledCode.replace(`"<WORKER_CODE>"`, '`\n' + escapedWorkerBundledCode + '`')
-const finalMinifiedCode = clientMinifiedCode.replace(`"<WORKER_CODE>"`, '`\n' + escapedWorkerMinifiedCode + '`')
-
-Bun.write(finalBundlePath, finalBundledCode)
-Bun.write(finalMinifiedPath, finalMinifiedCode)
-Bun.write(demoPath, finalBundledCode)
-
-await $`rm ./dist/${clientFileName}.js`
-await $`rm ./dist/${clientFileName}.min.js`
-await $`rm ./dist/${workerFileName}.js`
-await $`rm ./dist/${workerFileName}.min.js`
+Bun.write(demoMainBundlePath, mainBundledCode)
+Bun.write(demoWorkerBundlePath, workerBundledCode)
 
 await $`bun x tsc`
-
-export {}
-
-function escapeWorkerCode(code: string) {
-  // escape backslashes: \ becomes \\
-  code = code.replace(/\\/g, '\\\\')
-  // escape backticks: ` becomes \`
-  code = code.replace(/`/g, '\\`')
-  // escape interpolations: ${ becomes \${
-  code = code.replace(/\$\{/g, '\\${')
-
-  return code
-}
-

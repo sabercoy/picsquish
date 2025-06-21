@@ -1,16 +1,7 @@
-import { BYTES_PER_PIXEL, ResizedImage, ResizeStage, TileOptions, TileTransform } from '..'
-import { placeTransformedTile } from '../worker/placeTransformedTile'
-
-const workerCode = '<WORKER_CODE>'
-const workerBlob = new Blob([workerCode], { type: 'application/javascript' })
+import { BYTES_PER_PIXEL, ResizedImage, ResizeStage, TileOptions, TileTransform, TaskType } from '../common'
+import { placeTile } from '../worker/placeTile'
 
 type TaskId = number
-
-export enum TaskType {
-  CreateResizeMetadata,
-  TransformTile,
-  FinalizeImage,
-}
 
 type TaskData1 = {
   image: Blob | ResizedImage
@@ -207,9 +198,7 @@ export class TaskQueue {
   }
 
   #createWorker() {
-    const workerUrl = URL.createObjectURL(workerBlob)
-    const worker = new Worker(workerUrl)
-    URL.revokeObjectURL(workerUrl)
+    const worker = new Worker(new URL('./picsquish-worker.js', import.meta.url))
 
     worker.onmessage = (event: MessageEvent<TaskResult>) => {
       const squishContext = this.#squishContexts.get(event.data.squishId)
@@ -247,7 +236,7 @@ export class TaskQueue {
         const { taskId, squishId, output } = event.data as TaskResult2
         if (!squishContext.to) throw new Error('SquishContext to not found')
 
-        placeTransformedTile(squishContext.to, squishContext.toWidth, output.tileTransform)
+        placeTile(squishContext.to, squishContext.toWidth, output.tileTransform)
         squishContext.remainingTileCount--
 
         if (!squishContext.remainingTileCount) {

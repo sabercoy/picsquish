@@ -27,7 +27,7 @@
     "noPropertyAccessFromIndexSignature": false
   },
   "files": [
-    "./src/client/client.ts",
-    "./src/worker/worker.ts"
+    "./src/main/picsquish.ts",
+    "./src/worker/picsquish-worker.ts"
   ]
 }

@@ -1,4 +1,4 @@
-import { BYTES_PER_PIXEL, TileTransform } from '..'
+import { BYTES_PER_PIXEL, TileTransform } from '../common'
 
 export function extractTile(
   from: Uint8ClampedArray,

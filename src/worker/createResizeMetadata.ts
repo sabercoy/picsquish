@@ -1,6 +1,6 @@
 import { createResizeStages } from './createResizeStages'
 import { createTileTransforms } from './createTileTransforms'
-import { CreateResizeMetadataParams, ResizeStage } from '..'
+import { CreateResizeMetadataParams, ResizeStage } from '../common'
 
 export async function createResizeMetadata(params: CreateResizeMetadataParams) {
   let from: Uint8ClampedArray

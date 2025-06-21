@@ -1,6 +1,6 @@
-import { BYTES_PER_PIXEL, Options, ResizedImage, TileOptions } from '..'
+import { BYTES_PER_PIXEL, Options, ResizedImage, TileOptions } from '../common'
 import { createResizeMetadata } from '../worker/createResizeMetadata'
-import { placeTransformedTile } from '../worker/placeTransformedTile'
+import { placeTile } from '../worker/placeTile'
 import { transformTile } from '../worker/transformTile'
 import { TaskQueue } from './task-queue'
 
@@ -37,7 +37,7 @@ export class PicSquish {
       
       for (const tileTransform of metadata.tileTransforms) {
         tileTransform.tile = transformTile(tileTransform).buffer
-        placeTransformedTile(to, toWidth, tileTransform)
+        placeTile(to, toWidth, tileTransform)
       }
 
       metadata.stages.shift()

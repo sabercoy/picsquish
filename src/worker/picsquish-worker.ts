@@ -1,5 +1,6 @@
+import { TaskType } from '../common'
 import { createResizeMetadata } from './createResizeMetadata'
-import { TaskMessage, TaskMessage1, TaskMessage2, TaskResult1, TaskResult2, TaskType } from '../client/task-queue'
+import { TaskMessage, TaskMessage1, TaskMessage2, TaskResult1, TaskResult2 } from '../main/task-queue'
 import { transformTile } from './transformTile'
 
 self.onmessage = async (event: MessageEvent<TaskMessage>) => {

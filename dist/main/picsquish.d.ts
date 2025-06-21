@@ -1,4 +1,4 @@
-import { Options } from '..';
+import { Options } from '../common';
 export declare class PicSquish {
     #private;
     constructor(globalOptions: Options);

@@ -3,7 +3,7 @@
 // Presets for quality 0..3. Filter functions + window size
 //
 
-import { Filter } from '../..'
+import { Filter } from '../../common'
 
 type FilterValue = {
   win: number

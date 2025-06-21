@@ -1,3 +1,10 @@
+export const MAIN_FILE_NAME = 'picsquish'
+export const WORKER_FILE_NAME = 'picsquish-worker'
+export const DEMO_PATH = 'demo'
+export const FINAL_PATH = 'dist'
+
+export const BYTES_PER_PIXEL = 4 // channels: RGBA
+
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013'
 
 export type TileOptions = {
@@ -65,4 +72,8 @@ export type CreateResizeMetadataParams = {
   tileOptions: TileOptions
 }
 
-export const BYTES_PER_PIXEL = 4 // channels: RGBA
+export enum TaskType {
+  CreateResizeMetadata,
+  TransformTile,
+  FinalizeImage,
+}

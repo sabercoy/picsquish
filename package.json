@@ -7,11 +7,11 @@
   "exports": {
     ".": {
       "import": "./dist/picsquish.js",
-      "types": "./dist/client/client.d.ts"
+      "types": "./dist/main/picsquish.d.ts"
     },
     "./min": {
       "import": "./dist/picsquish.min.js",
-      "types": "./dist/client/client.d.ts"
+      "types": "./dist/main/picsquish.d.ts"
     }
   },
   "keywords": [
@@ -23,7 +23,7 @@
   ],
   "scripts": {
     "build": "bun ./scripts/build.ts",
-    "demo": "bun demo.ts"
+    "demo": "bun ./scripts/demo.ts"
   },
   "type": "module",
   "devDependencies": {

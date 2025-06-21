@@ -1,6 +1,6 @@
-import { BYTES_PER_PIXEL, TileTransform } from '..'
+import { BYTES_PER_PIXEL, TileTransform } from '../common'
 
-export function placeTransformedTile(
+export function placeTile(
   to: Uint8ClampedArray,
   toWidth: number,
   tileTransform: TileTransform,

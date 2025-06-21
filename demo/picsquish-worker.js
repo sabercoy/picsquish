@@ -166,9 +166,6 @@ var require_glur = __commonJS((exports, module) => {
   module.exports = blurRGBA;
 });
 
-// src/common.ts
-var BYTES_PER_PIXEL = 4;
-
 // src/worker/createResizeStages.ts
 var MIN_INNER_TILE_SIZE = 2;
 function createResizeStages(fromWidth, fromHeight, toWidth, toHeight, initialTileSize, filterPadding) {
@@ -188,6 +185,9 @@ function createResizeStages(fromWidth, fromHeight, toWidth, toHeight, initialTil
   }
   return stages;
 }
+
+// src/common.ts
+var BYTES_PER_PIXEL = 4;
 
 // src/worker/extractTile.ts
 function extractTile(from, fromWidth, tileTransform) {
@@ -312,16 +312,6 @@ async function createResizeMetadata(params) {
     tileTransforms,
     stages
   };
-}
-
-// src/worker/placeTile.ts
-function placeTile(to, toWidth, tileTransform) {
-  const tile = new Uint8ClampedArray(tileTransform.tile);
-  for (let row = 0;row < tileTransform.toHeight; row++) {
-    const fromStart = row * tileTransform.toWidth * BYTES_PER_PIXEL;
-    const toStart = ((tileTransform.toY + row) * toWidth + tileTransform.toX) * BYTES_PER_PIXEL;
-    to.set(tile.subarray(fromStart, fromStart + tileTransform.toWidth * BYTES_PER_PIXEL), toStart);
-  }
 }
 
 // src/worker/multimath/resize_filter_info.ts
@@ -690,284 +680,40 @@ function transformTile(tileTransform) {
   return resizedTile;
 }
 
-// src/main/task-queue.ts
-var createId = (() => {
-  let count = 0;
-  return () => ++count;
-})();
-
-class WorkerPool {
-  #workerToTaskId;
-  #workerToTimeoutId;
-  #taskIdToWorker;
-  #taskIdToTask;
-  constructor() {
-    this.#workerToTaskId = new Map;
-    this.#workerToTimeoutId = new Map;
-    this.#taskIdToWorker = new Map;
-    this.#taskIdToTask = new Map;
-  }
-  get count() {
-    return this.#workerToTaskId.size;
-  }
-  #clearWorkerTimeout(worker) {
-    clearTimeout(this.#workerToTimeoutId.get(worker));
-  }
-  #assignTask(worker, task, taskMessage, transfer) {
-    this.#workerToTaskId.set(worker, task.id);
-    this.#taskIdToWorker.set(task.id, worker);
-    this.#taskIdToTask.set(task.id, task);
-    worker.postMessage(taskMessage, transfer);
-    this.#clearWorkerTimeout(worker);
-  }
-  assignPriority1Task(worker, task) {
-    const taskMessage = {
-      taskId: task.id,
-      squishId: task.squishId,
-      taskType: 0 /* CreateResizeMetadata */,
-      image: task.data.image,
-      maxDimension: task.data.maxDimension,
-      tileOptions: task.data.tileOptions
-    };
-    this.#assignTask(worker, task, taskMessage, []);
-  }
-  assignPriority2Task(worker, task) {
-    const taskMessage = {
-      taskId: task.id,
-      squishId: task.squishId,
-      taskType: 1 /* TransformTile */,
-      tileTransform: task.data.tileTransform
-    };
-    this.#assignTask(worker, task, taskMessage, [taskMessage.tileTransform.tile]);
-  }
-  setWorkerTimeout(worker, duration) {
-    const id = setTimeout(() => {
-      const taskId = this.#workerToTaskId.get(worker);
-      if (taskId)
-        this.#taskIdToWorker.delete(taskId);
-      if (taskId)
-        this.#taskIdToTask.delete(taskId);
-      this.#workerToTimeoutId.delete(worker);
-      this.#workerToTaskId.delete(worker);
-      worker.terminate();
-    }, duration);
-    this.#workerToTimeoutId.set(worker, id);
-  }
-  addWorker(worker) {
-    this.#workerToTaskId.set(worker, null);
-  }
-  getWorker(taskId) {
-    return this.#taskIdToWorker.get(taskId);
-  }
-  getTask(taskId) {
-    return this.#taskIdToTask.get(taskId);
-  }
-  getAvailableWorker() {
-    for (const [worker, taskId] of this.#workerToTaskId.entries()) {
-      if (taskId === null)
-        return worker;
-    }
-    return null;
-  }
-  removeTask(taskId) {
-    const worker = this.#taskIdToWorker.get(taskId);
-    if (worker)
-      this.#workerToTaskId.set(worker, null);
-    this.#taskIdToWorker.delete(taskId);
-    this.#taskIdToTask.delete(taskId);
-  }
-}
-
-class TaskQueue {
-  #maxIdleTime;
-  #maxPoolSize;
-  #squishContexts;
-  #priority1TaskQueue;
-  #priority2TaskQueue;
-  #workerPool;
-  constructor(maxWorkerPoolSize, maxWorkerIdleTime) {
-    this.#maxPoolSize = maxWorkerPoolSize;
-    this.#maxIdleTime = maxWorkerIdleTime;
-    this.#squishContexts = new Map;
-    this.#priority1TaskQueue = [];
-    this.#priority2TaskQueue = [];
-    this.#workerPool = new WorkerPool;
-  }
-  #createWorker() {
-    const worker = new Worker(new URL("./picsquish-worker.js", import.meta.url));
-    worker.onmessage = (event) => {
-      const squishContext = this.#squishContexts.get(event.data.squishId);
-      if (!squishContext)
-        throw new Error("SquishContext not found");
-      if (event.data.error)
-        squishContext.reject(event.data.error);
-      if (event.data.taskType === 0 /* CreateResizeMetadata */) {
-        const { squishId, output } = event.data;
-        const toWidth = output.stages[0].toWidth;
-        const toHeight = output.stages[0].toHeight;
-        squishContext.from = new Uint8ClampedArray(output.from);
-        squishContext.fromWidth = output.fromWidth;
-        squishContext.fromHeight = output.fromHeight;
-        squishContext.to = new Uint8ClampedArray(toWidth * toHeight * BYTES_PER_PIXEL);
-        squishContext.toWidth = toWidth;
-        squishContext.toHeight = toHeight;
-        squishContext.stages = output.stages;
-        squishContext.remainingTileCount = output.tileTransforms.length;
-        for (const tileTransform of output.tileTransforms) {
-          this.#priority2TaskQueue.push({
-            id: createId(),
-            squishId,
-            data: {
-              tileTransform
-            }
-          });
-          this.#processQueue();
+// src/worker/picsquish-worker.ts
+self.onmessage = async (event) => {
+  const { taskId, squishId, taskType } = event.data;
+  try {
+    if (taskType === 0 /* CreateResizeMetadata */) {
+      const { image, maxDimension, tileOptions } = event.data;
+      const result = await createResizeMetadata({ image, maxDimension, tileOptions });
+      const taskResult = {
+        taskId,
+        squishId,
+        taskType,
+        output: {
+          from: result.from,
+          fromWidth: result.fromWidth,
+          fromHeight: result.fromHeight,
+          tileTransforms: result.tileTransforms,
+          stages: result.stages
         }
-      }
-      if (event.data.taskType === 1 /* TransformTile */) {
-        const { taskId, squishId, output } = event.data;
-        if (!squishContext.to)
-          throw new Error("SquishContext to not found");
-        placeTile(squishContext.to, squishContext.toWidth, output.tileTransform);
-        squishContext.remainingTileCount--;
-        if (!squishContext.remainingTileCount) {
-          squishContext.stages.shift();
-          if (squishContext.stages[0]) {
-            this.#priority1TaskQueue.push({
-              id: taskId,
-              squishId,
-              data: {
-                image: {
-                  from: squishContext.to,
-                  fromWidth: squishContext.toWidth,
-                  fromHeight: squishContext.toHeight,
-                  stages: squishContext.stages
-                },
-                maxDimension: squishContext.maxDimension,
-                tileOptions: squishContext.tileOptions
-              }
-            });
-          } else {
-            const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight);
-            createImageBitmap(imageData).then((imageBitmap) => {
-              this.#squishContexts.delete(event.data.squishId);
-              squishContext.resolve(imageBitmap);
-            });
-          }
-        }
-      }
-      const finishedWorker = this.#workerPool.getWorker(event.data.taskId);
-      if (finishedWorker)
-        this.#workerPool.setWorkerTimeout(finishedWorker, this.#maxIdleTime);
-      this.#workerPool.removeTask(event.data.taskId);
-      this.#processQueue();
-    };
-    this.#workerPool.addWorker(worker);
-  }
-  #processQueue() {
-    const availableWorker = this.#workerPool.getAvailableWorker();
-    if (availableWorker) {
-      const priority1Task = this.#priority1TaskQueue.shift();
-      if (priority1Task)
-        return this.#workerPool.assignPriority1Task(availableWorker, priority1Task);
-      const priority2Task = this.#priority2TaskQueue.shift();
-      if (priority2Task)
-        return this.#workerPool.assignPriority2Task(availableWorker, priority2Task);
-    } else if (this.#workerPool.count < this.#maxPoolSize) {
-      this.#createWorker();
-      this.#processQueue();
+      };
+      const tiles = result.tileTransforms.map((tileTransform) => tileTransform.tile);
+      self.postMessage(taskResult, [result.from, ...tiles]);
     }
-  }
-  add(taskData) {
-    return new Promise((resolve, reject) => {
-      const taskId = createId();
-      this.#squishContexts.set(taskId, {
-        maxDimension: taskData.maxDimension,
-        tileOptions: taskData.tileOptions,
-        from: null,
-        fromWidth: 0,
-        fromHeight: 0,
-        to: null,
-        toWidth: 0,
-        toHeight: 0,
-        stages: [],
-        remainingTileCount: Infinity,
-        resolve,
-        reject
-      });
-      this.#priority1TaskQueue.push({
-        id: taskId,
-        squishId: taskId,
-        data: taskData
-      });
-      this.#processQueue();
-    });
-  }
-}
-
-// src/main/picsquish.ts
-class PicSquish {
-  #taskQueue;
-  #globalOptions;
-  constructor(globalOptions) {
-    const hardwareConcurrency = typeof navigator === "undefined" ? 1 : navigator.hardwareConcurrency;
-    const maxWorkerPoolSize = globalOptions.maxWorkerPoolSize || Math.min(hardwareConcurrency, 4);
-    const maxWorkerIdleTime = globalOptions.maxWorkerIdleTime || 2000;
-    this.#taskQueue = new TaskQueue(maxWorkerPoolSize, maxWorkerIdleTime);
-    this.#globalOptions = globalOptions;
-  }
-  async#squishOnMainThread(blob, maxDimension, tileOptions) {
-    let resizedImage = null;
-    let from;
-    let fromWidth;
-    let fromHeight;
-    let to;
-    let toWidth;
-    let toHeight;
-    for (;; ) {
-      const metadata = await createResizeMetadata({ image: resizedImage || blob, maxDimension, tileOptions });
-      from = new Uint8ClampedArray(metadata.from);
-      fromWidth = metadata.fromWidth;
-      fromHeight = metadata.fromHeight;
-      toWidth = metadata.stages[0].toWidth;
-      toHeight = metadata.stages[0].toHeight;
-      to = new Uint8ClampedArray(toWidth * toHeight * BYTES_PER_PIXEL);
-      for (const tileTransform of metadata.tileTransforms) {
-        tileTransform.tile = transformTile(tileTransform).buffer;
-        placeTile(to, toWidth, tileTransform);
-      }
-      metadata.stages.shift();
-      resizedImage = { from: to, fromWidth: toWidth, fromHeight: toHeight, stages: metadata.stages };
-      if (!metadata.stages[0])
-        break;
+    if (taskType === 1 /* TransformTile */) {
+      const { tileTransform } = event.data;
+      tileTransform.tile = transformTile(tileTransform).buffer;
+      const taskResult = {
+        taskId,
+        squishId,
+        taskType,
+        output: { tileTransform }
+      };
+      self.postMessage(taskResult, [tileTransform.tile]);
     }
-    const imageData = new ImageData(resizedImage.from, resizedImage.fromWidth, resizedImage.fromHeight);
-    return await createImageBitmap(imageData);
+  } catch (error) {
+    self.postMessage({ taskId, squishId, taskType, error });
   }
-  async squish(blob, localOptions) {
-    const combinedOptions = localOptions ? { ...this.#globalOptions, ...localOptions } : this.#globalOptions;
-    const maxDimension = combinedOptions.maxDimension;
-    const tileSize = combinedOptions.tileSize || 1024;
-    const filter = combinedOptions.filter || "mks2013";
-    const unsharpAmount = combinedOptions.unsharpAmount || 0;
-    const unsharpRadius = combinedOptions.unsharpRadius || 0;
-    const unsharpThreshold = combinedOptions.unsharpThreshold || 0;
-    const useMainThread = combinedOptions.useMainThread;
-    const FILTER_PADDING = 3;
-    const filterPadding = Math.ceil(Math.max(FILTER_PADDING, 2.5 * unsharpRadius | 0));
-    const tileOptions = {
-      initialSize: tileSize,
-      filterPadding,
-      filter,
-      unsharpAmount,
-      unsharpRadius,
-      unsharpThreshold
-    };
-    if (useMainThread)
-      return await this.#squishOnMainThread(blob, maxDimension, tileOptions);
-    return this.#taskQueue.add({ image: blob, maxDimension, tileOptions });
-  }
-}
-export {
-  PicSquish
 };

@@ -19,4 +19,3 @@ export function extractTile(
 
   return tilePixels
 }
-

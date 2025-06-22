@@ -28,6 +28,6 @@
   },
   "files": [
     "./src/main/picsquish.ts",
-    "./src/worker/picsquish-worker.ts"
+    "./src/worker/worker.ts"
   ]
 }

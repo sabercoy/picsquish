@@ -75,5 +75,61 @@ export type CreateResizeMetadataParams = {
 export enum TaskType {
   CreateResizeMetadata,
   TransformTile,
-  FinalizeImage,
 }
+
+export type TaskId = number
+
+export type TaskData1 = {
+  image: Blob | ResizedImage
+  maxDimension: number
+  tileOptions: TileOptions
+}
+
+export type TaskData2 = {
+  tileTransform: TileTransform
+}
+
+export type PendingTask = {
+  id: TaskId
+  squishId: TaskId
+}
+
+export type PendingTask1 = PendingTask & {
+  data: TaskData1
+}
+
+export type PendingTask2 = PendingTask & {
+  data: TaskData2
+}
+
+export type TaskResult = {
+  taskId: TaskId
+  squishId: TaskId
+  taskType: TaskType
+  error?: Error
+}
+
+export type TaskResult1 = TaskResult & {
+  output: {
+    from: ArrayBufferLike
+    fromWidth: number
+    fromHeight: number
+    tileTransforms: TileTransform[]
+    stages: ResizeStage[]
+  }
+}
+
+export type TaskResult2 = TaskResult & {
+  output: {
+    tileTransform: TileTransform
+  }
+}
+
+export type TaskMessage = {
+  taskId: TaskId
+  squishId: TaskId
+  taskType: TaskType
+}
+
+export type TaskMessage1 = TaskMessage & TaskData1
+export type TaskMessage2 = TaskMessage & TaskData2

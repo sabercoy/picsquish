@@ -2,18 +2,12 @@ import { BYTES_PER_PIXEL, Options, ResizedImage, TileOptions } from '../common'
 import { createResizeMetadata } from '../worker/create-resize-metadata'
 import { placeTile } from './place-tile'
 import { transformTile } from '../worker/transform-tile'
-import { TaskQueue } from './task-queue'
+import { taskQueue } from './task-queue'
 
 export class PicSquish {
-  #taskQueue: TaskQueue
   #globalOptions: Options
 
   constructor(globalOptions: Options) {
-    const hardwareConcurrency = typeof navigator === 'undefined' ? 1 : navigator.hardwareConcurrency
-    const maxWorkerPoolSize = globalOptions.maxWorkerPoolSize || Math.min(hardwareConcurrency, 4)
-    const maxWorkerIdleTime = globalOptions.maxWorkerIdleTime || 2000
-
-    this.#taskQueue = new TaskQueue(maxWorkerPoolSize, maxWorkerIdleTime)
     this.#globalOptions = globalOptions
   }
 
@@ -58,6 +52,9 @@ export class PicSquish {
     const unsharpRadius = combinedOptions.unsharpRadius || 0
     const unsharpThreshold = combinedOptions.unsharpThreshold || 0
     const useMainThread = combinedOptions.useMainThread
+    const hardwareConcurrency = typeof navigator === 'undefined' ? 1 : navigator.hardwareConcurrency
+    const maxWorkerPoolSize = combinedOptions.maxWorkerPoolSize || Math.min(hardwareConcurrency, 4)
+    const maxWorkerPoolIdleTime = combinedOptions.maxWorkerIdleTime || 2000
 
     const FILTER_PADDING = 3 // Max possible filter window size
     const filterPadding = Math.ceil(Math.max(FILTER_PADDING, 2.5 * unsharpRadius | 0))
@@ -73,6 +70,10 @@ export class PicSquish {
 
     if (useMainThread) return await this.#squishOnMainThread(blob, maxDimension, tileOptions)
 
-    return this.#taskQueue.add({ image: blob, maxDimension, tileOptions })
+    return taskQueue.add(
+      { image: blob, maxDimension, tileOptions },
+      maxWorkerPoolSize,
+      maxWorkerPoolIdleTime,
+    )
   }
 }

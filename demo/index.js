@@ -71,7 +71,7 @@ imageUploadMainThread.addEventListener('change', async (event) => {
   }))
 })
 
-const p = pica({ features: ['js', 'ww'] })
+const p = pica({ features: ['js'/* , 'ww' */] })
 const createResizedPicaCanvas = (originalImageElement, maxDimension) => new Promise((resolve, reject) => {
   createResizedCanvas(originalImageElement, maxDimension)
   .then(canvas => p.resize(originalImageElement, canvas))
@@ -102,6 +102,10 @@ imageUploadPicsquish.addEventListener('change', async (event) => {
   imageGrid.innerHTML = ''
   remainingCount = event.target.files.length
   start = Date.now()
+
+  // Array.from(event.target.files).map(file => {
+  //   createImageBitmap(file)
+  // })
 
   Array.from(event.target.files).map(file => ps.squish(file).then(imageBitmap => {
     const canvas = document.createElement('canvas')

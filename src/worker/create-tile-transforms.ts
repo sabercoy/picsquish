@@ -40,15 +40,14 @@ export function createTileTransforms(
 
   // prevent infinite loop, this should never happen
   if (innerTileWidth < 1 || innerTileHeight < 1) {
-    throw new Error('Internal error in picsquish: target tile width/height is too small.')
+    throw new Error('Picsquish error: target tile width/height is too small')
   }
 
   let x, y
   let innerX, innerY, toTileWidth, toTileHeight
   const tileTransforms: TileTransform[] = []
 
-  // we go top-to-down instead of left-to-right to make image displayed from top to
-  // doesn in the browser
+  // we go top-to-down instead of left-to-right
   for (innerY = 0; innerY < toHeight; innerY += innerTileHeight) {
     for (innerX = 0; innerX < toWidth; innerX += innerTileWidth) {
       x = innerX - filterPadding

@@ -100,50 +100,49 @@ class TaskQueue {
       this.#priority2TaskQueue.push({
         id: createId(),
         squishId,
-        data: {
-          tileTransform,
-        },
+        data: { tileTransform },
       })
     }
   }
 
   #onTask2Complete(squishContext: SquishContext, taskResult: TaskResult2) {
     const { squishId, output } = taskResult
-    if (!squishContext.to) throw new Error('SquishContext to not found')
+    if (!squishContext.to) throw new Error('Picsquish error: squishContext.to not found')
 
     placeTile(squishContext.to, squishContext.toWidth, output.tileTransform)
     squishContext.remainingTileCount--
 
-    if (!squishContext.remainingTileCount) {
-      squishContext.stages.shift()
-      if (squishContext.stages[0]) {
-        this.#priority1TaskQueue.push({
-          id: createId(),
-          squishId,
-          data: {
-            image: {
-              from: squishContext.to,
-              fromWidth: squishContext.toWidth,
-              fromHeight: squishContext.toHeight,
-              stages: squishContext.stages,
-            },
-            maxDimension: squishContext.maxDimension,
-            tileOptions: squishContext.tileOptions
+    if (squishContext.remainingTileCount) return undefined
+
+    squishContext.stages.shift()
+
+    if (squishContext.stages[0]) {
+      this.#priority1TaskQueue.push({
+        id: createId(),
+        squishId,
+        data: {
+          image: {
+            from: squishContext.to,
+            fromWidth: squishContext.toWidth,
+            fromHeight: squishContext.toHeight,
+            stages: squishContext.stages,
           },
-        })
-      } else {
-        const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight)
-        createImageBitmap(imageData).then(imageBitmap => {
-          this.#squishContexts.delete(squishId)
-          squishContext.resolve(imageBitmap)
-        })
-      }
+          maxDimension: squishContext.maxDimension,
+          tileOptions: squishContext.tileOptions
+        },
+      })
+    } else {
+      const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight)
+      createImageBitmap(imageData).then(imageBitmap => {
+        this.#squishContexts.delete(squishId)
+        squishContext.resolve(imageBitmap)
+      })
     }
   }
   
   #onTaskComplete(event: MessageEvent<TaskResult>) {
     const squishContext = this.#squishContexts.get(event.data.squishId)
-    if (!squishContext) throw new Error('SquishContext not found')
+    if (!squishContext) throw new Error('Picsquish error: squishContext not found')
     if (event.data.error) squishContext.reject(event.data.error)
 
     switch (event.data.taskType) {

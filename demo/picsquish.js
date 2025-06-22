@@ -194,7 +194,7 @@ function extractTileFromOriginalImage(from, tileTransform) {
   const tempCanvas = new OffscreenCanvas(tileTransform.width, tileTransform.height);
   const tempContext = tempCanvas.getContext("2d");
   if (!tempContext)
-    throw new Error("Canvas 2D context not supported");
+    throw new Error("Picsquish error: canvas 2D context not supported");
   tempContext.globalCompositeOperation = "copy";
   tempContext.drawImage(from, tileTransform.x, tileTransform.y, tileTransform.width, tileTransform.height, 0, 0, tileTransform.width, tileTransform.height);
   return tempContext.getImageData(0, 0, tileTransform.width, tileTransform.height).data.buffer;
@@ -236,7 +236,7 @@ function createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, in
   const innerTileWidth = pixelFloor(initialSize * scaleX) - 2 * filterPadding;
   const innerTileHeight = pixelFloor(initialSize * scaleY) - 2 * filterPadding;
   if (innerTileWidth < 1 || innerTileHeight < 1) {
-    throw new Error("Internal error in picsquish: target tile width/height is too small.");
+    throw new Error("Picsquish error: target tile width/height is too small");
   }
   let x, y;
   let innerX, innerY, toTileWidth, toTileHeight;
@@ -893,7 +893,7 @@ function extractTileFromOriginalImage(from, tileTransform) {
   const tempCanvas = new OffscreenCanvas(tileTransform.width, tileTransform.height);
   const tempContext = tempCanvas.getContext("2d");
   if (!tempContext)
-    throw new Error("Canvas 2D context not supported");
+    throw new Error("Picsquish error: canvas 2D context not supported");
   tempContext.globalCompositeOperation = "copy";
   tempContext.drawImage(from, tileTransform.x, tileTransform.y, tileTransform.width, tileTransform.height, 0, 0, tileTransform.width, tileTransform.height);
   return tempContext.getImageData(0, 0, tileTransform.width, tileTransform.height).data.buffer;
@@ -935,7 +935,7 @@ function createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, in
   const innerTileWidth = pixelFloor(initialSize * scaleX) - 2 * filterPadding;
   const innerTileHeight = pixelFloor(initialSize * scaleY) - 2 * filterPadding;
   if (innerTileWidth < 1 || innerTileHeight < 1) {
-    throw new Error("Internal error in picsquish: target tile width/height is too small.");
+    throw new Error("Picsquish error: target tile width/height is too small");
   }
   let x, y;
   let innerX, innerY, toTileWidth, toTileHeight;
@@ -1556,48 +1556,46 @@ class TaskQueue {
       this.#priority2TaskQueue.push({
         id: createId(),
         squishId,
-        data: {
-          tileTransform
-        }
+        data: { tileTransform }
       });
     }
   }
   #onTask2Complete(squishContext, taskResult) {
     const { squishId, output } = taskResult;
     if (!squishContext.to)
-      throw new Error("SquishContext to not found");
+      throw new Error("Picsquish error: squishContext.to not found");
     placeTile(squishContext.to, squishContext.toWidth, output.tileTransform);
     squishContext.remainingTileCount--;
-    if (!squishContext.remainingTileCount) {
-      squishContext.stages.shift();
-      if (squishContext.stages[0]) {
-        this.#priority1TaskQueue.push({
-          id: createId(),
-          squishId,
-          data: {
-            image: {
-              from: squishContext.to,
-              fromWidth: squishContext.toWidth,
-              fromHeight: squishContext.toHeight,
-              stages: squishContext.stages
-            },
-            maxDimension: squishContext.maxDimension,
-            tileOptions: squishContext.tileOptions
-          }
-        });
-      } else {
-        const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight);
-        createImageBitmap(imageData).then((imageBitmap) => {
-          this.#squishContexts.delete(squishId);
-          squishContext.resolve(imageBitmap);
-        });
-      }
+    if (squishContext.remainingTileCount)
+      return;
+    squishContext.stages.shift();
+    if (squishContext.stages[0]) {
+      this.#priority1TaskQueue.push({
+        id: createId(),
+        squishId,
+        data: {
+          image: {
+            from: squishContext.to,
+            fromWidth: squishContext.toWidth,
+            fromHeight: squishContext.toHeight,
+            stages: squishContext.stages
+          },
+          maxDimension: squishContext.maxDimension,
+          tileOptions: squishContext.tileOptions
+        }
+      });
+    } else {
+      const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight);
+      createImageBitmap(imageData).then((imageBitmap) => {
+        this.#squishContexts.delete(squishId);
+        squishContext.resolve(imageBitmap);
+      });
     }
   }
   #onTaskComplete(event) {
     const squishContext = this.#squishContexts.get(event.data.squishId);
     if (!squishContext)
-      throw new Error("SquishContext not found");
+      throw new Error("Picsquish error: squishContext not found");
     if (event.data.error)
       squishContext.reject(event.data.error);
     switch (event.data.taskType) {

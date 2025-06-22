@@ -6,7 +6,7 @@ function extractTileFromOriginalImage(
 ) {
   const tempCanvas = new OffscreenCanvas(tileTransform.width, tileTransform.height)
   const tempContext = tempCanvas.getContext('2d')
-  if (!tempContext) throw new Error('Canvas 2D context not supported')
+  if (!tempContext) throw new Error('Picsquish error: canvas 2D context not supported')
   tempContext.globalCompositeOperation = 'copy'
   tempContext.drawImage(from, tileTransform.x, tileTransform.y, tileTransform.width, tileTransform.height, 0, 0, tileTransform.width, tileTransform.height)
   return tempContext.getImageData(0, 0, tileTransform.width, tileTransform.height).data.buffer as ArrayBuffer

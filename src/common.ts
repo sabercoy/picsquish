@@ -1,8 +1,3 @@
-export const MAIN_FILE_NAME = 'picsquish'
-export const WORKER_FILE_NAME = 'picsquish-worker'
-export const DEMO_PATH = 'demo'
-export const FINAL_PATH = 'dist'
-
 export const BYTES_PER_PIXEL = 4 // channels: RGBA
 
 export type InitialImage = Blob | ImageBitmap
@@ -16,17 +11,6 @@ export type TileOptions = {
   unsharpAmount: number,
   unsharpRadius: number,
   unsharpThreshold: number,
-}
-
-export type Options = {
-  useMainThread?: boolean
-  maxWorkerPoolSize?: number
-  maxWorkerIdleTime?: number
-  tileSize?: TileOptions['initialSize']
-  filter?: TileOptions['filter']
-  unsharpAmount?: TileOptions['unsharpAmount']
-  unsharpRadius?: TileOptions['unsharpRadius']
-  unsharpThreshold?: TileOptions['unsharpThreshold']
 }
 
 export type ResizeStage = {
@@ -80,7 +64,7 @@ export type TaskData1 = {
   tileOptions: TileOptions
 }
 
-export type TaskData2 = {
+type TaskData2 = {
   tileTransform: TileTransform
 }
 

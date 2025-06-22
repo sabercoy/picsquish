@@ -1,7 +1,3 @@
-export declare const MAIN_FILE_NAME = "picsquish";
-export declare const WORKER_FILE_NAME = "picsquish-worker";
-export declare const DEMO_PATH = "demo";
-export declare const FINAL_PATH = "dist";
 export declare const BYTES_PER_PIXEL = 4;
 export type InitialImage = Blob | ImageBitmap;
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013';
@@ -12,16 +8,6 @@ export type TileOptions = {
     unsharpAmount: number;
     unsharpRadius: number;
     unsharpThreshold: number;
-};
-export type Options = {
-    useMainThread?: boolean;
-    maxWorkerPoolSize?: number;
-    maxWorkerIdleTime?: number;
-    tileSize?: TileOptions['initialSize'];
-    filter?: TileOptions['filter'];
-    unsharpAmount?: TileOptions['unsharpAmount'];
-    unsharpRadius?: TileOptions['unsharpRadius'];
-    unsharpThreshold?: TileOptions['unsharpThreshold'];
 };
 export type ResizeStage = {
     toWidth: number;
@@ -68,7 +54,7 @@ export type TaskData1 = {
     maxDimension: number;
     tileOptions: TileOptions;
 };
-export type TaskData2 = {
+type TaskData2 = {
     tileTransform: TileTransform;
 };
 export type TaskMessage = {
@@ -105,3 +91,4 @@ export type TaskResult2 = TaskResult & {
         tileTransform: TileTransform;
     };
 };
+export {};

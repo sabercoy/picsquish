@@ -319,16 +319,6 @@ async function createResizeMetadata(params) {
   return { tileTransforms, stages };
 }
 
-// src/main/place-tile.ts
-function placeTile(to, toWidth, tileTransform) {
-  const tile = new Uint8ClampedArray(tileTransform.tile);
-  for (let row = 0;row < tileTransform.toHeight; row++) {
-    const fromStart = row * tileTransform.toWidth * BYTES_PER_PIXEL;
-    const toStart = ((tileTransform.toY + row) * toWidth + tileTransform.toX) * BYTES_PER_PIXEL;
-    to.set(tile.subarray(fromStart, fromStart + tileTransform.toWidth * BYTES_PER_PIXEL), toStart);
-  }
-}
-
 // src/worker/multimath/resize-filter-info.ts
 var FILTER_MAP = {
   box: {
@@ -693,6 +683,16 @@ function transformTile(tileTransform) {
   if (tileTransform.unsharpAmount)
     unsharp(resizedTile, tileTransform.toWidth, tileTransform.toHeight, tileTransform.unsharpAmount, tileTransform.unsharpRadius, tileTransform.unsharpThreshold);
   return resizedTile;
+}
+
+// src/main/place-tile.ts
+function placeTile(to, toWidth, tileTransform) {
+  const tile = new Uint8ClampedArray(tileTransform.tile);
+  for (let row = 0;row < tileTransform.toHeight; row++) {
+    const fromStart = row * tileTransform.toWidth * BYTES_PER_PIXEL;
+    const toStart = ((tileTransform.toY + row) * toWidth + tileTransform.toX) * BYTES_PER_PIXEL;
+    to.set(tile.subarray(fromStart, fromStart + tileTransform.toWidth * BYTES_PER_PIXEL), toStart);
+  }
 }
 
 // src/main/worker-pool.ts

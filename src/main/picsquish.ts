@@ -1,8 +1,19 @@
-import { BYTES_PER_PIXEL, InitialImage, Options, ResizedImage, TileOptions } from '../common'
+import { BYTES_PER_PIXEL, InitialImage, ResizedImage, TileOptions } from '../common'
 import { createResizeMetadata } from '../worker/create-resize-metadata'
 import { transformTile } from '../worker/transform-tile'
 import { placeTile } from './place-tile'
 import { taskQueue } from './task-queue'
+
+type Options = {
+  useMainThread?: boolean
+  maxWorkerPoolSize?: number
+  maxWorkerIdleTime?: number
+  tileSize?: TileOptions['initialSize']
+  filter?: TileOptions['filter']
+  unsharpAmount?: TileOptions['unsharpAmount']
+  unsharpRadius?: TileOptions['unsharpRadius']
+  unsharpThreshold?: TileOptions['unsharpThreshold']
+}
 
 async function squishOnMainThread(image: InitialImage, maxDimension: number, tileOptions: TileOptions) {
   let resizedImage: ResizedImage | null = null

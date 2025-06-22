@@ -9,7 +9,7 @@
 //
 
 // @ts-ignore
-import glur_mono16 from 'glur'
+import glur_mono16 from 'glur/mono16'
 
 function hsv_v16(
   img: Uint8Array<ArrayBufferLike>,

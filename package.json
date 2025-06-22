@@ -1,9 +1,16 @@
 {
   "name": "picsquish",
-  "version": "0.1.0",
-  "peerDependencies": {
-    "typescript": "^5.7.2"
-  },
+  "description": "Modern image resizer for browser",
+  "version": "0.1.1",
+  "keywords": [
+    "resize",
+    "scale",
+    "image",
+    "lanczos",
+    "canvas"
+  ],
+  "license": "MIT",
+  "repository": "sabercoy/picsquish",
   "exports": {
     ".": {
       "import": "./dist/picsquish.js",
@@ -14,18 +21,14 @@
       "types": "./dist/main/picsquish.d.ts"
     }
   },
-  "keywords": [
-    "resize",
-    "scale",
-    "image",
-    "lanczos",
-    "canvas"
-  ],
   "scripts": {
     "build": "bun ./scripts/build.ts",
     "demo": "bun ./scripts/demo.ts"
   },
   "type": "module",
+  "peerDependencies": {
+    "typescript": "^5.7.2"
+  },
   "devDependencies": {
     "@types/bun": "^1.1.14"
   },

@@ -1,6 +1,18 @@
 import { BYTES_PER_PIXEL, TileTransform } from '../common'
 
-export function extractTile(
+function extractTileFromOriginalImage(
+  from: ImageBitmap,
+  tileTransform: Omit<TileTransform, 'tile'>,
+) {
+  const tempCanvas = new OffscreenCanvas(tileTransform.width, tileTransform.height)
+  const tempContext = tempCanvas.getContext('2d')
+  if (!tempContext) throw new Error('Canvas 2D context not supported')
+  tempContext.globalCompositeOperation = 'copy'
+  tempContext.drawImage(from, tileTransform.x, tileTransform.y, tileTransform.width, tileTransform.height, 0, 0, tileTransform.width, tileTransform.height)
+  return tempContext.getImageData(0, 0, tileTransform.width, tileTransform.height).data.buffer as ArrayBuffer
+}
+
+function extractTileFromResizedImage(
   from: Uint8ClampedArray,
   fromWidth: number,
   tileTransform: Omit<TileTransform, 'tile'>,
@@ -17,5 +29,17 @@ export function extractTile(
     )
   }
 
-  return tilePixels
+  return tilePixels.buffer
+}
+
+export function extractTile(
+  from: ImageBitmap | Uint8ClampedArray,
+  fromWidth: number,
+  tileTransform: Omit<TileTransform, 'tile'>,
+) {
+  if (from instanceof ImageBitmap) {
+    return extractTileFromOriginalImage(from, tileTransform)
+  } else {
+    return extractTileFromResizedImage(from, fromWidth, tileTransform)
+  }
 }

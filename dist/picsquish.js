@@ -190,14 +190,30 @@ function createResizeStages(fromWidth, fromHeight, toWidth, toHeight, initialTil
 }
 
 // src/worker/extract-tile.ts
-function extractTile(from, fromWidth, tileTransform) {
+function extractTileFromOriginalImage(from, tileTransform) {
+  const tempCanvas = new OffscreenCanvas(tileTransform.width, tileTransform.height);
+  const tempContext = tempCanvas.getContext("2d");
+  if (!tempContext)
+    throw new Error("Canvas 2D context not supported");
+  tempContext.globalCompositeOperation = "copy";
+  tempContext.drawImage(from, tileTransform.x, tileTransform.y, tileTransform.width, tileTransform.height, 0, 0, tileTransform.width, tileTransform.height);
+  return tempContext.getImageData(0, 0, tileTransform.width, tileTransform.height).data.buffer;
+}
+function extractTileFromResizedImage(from, fromWidth, tileTransform) {
   const tilePixels = new Uint8ClampedArray(tileTransform.width * tileTransform.height * BYTES_PER_PIXEL);
   for (let row = 0;row < tileTransform.height; row++) {
     const srcStart = ((tileTransform.y + row) * fromWidth + tileTransform.x) * BYTES_PER_PIXEL;
     const dstStart = row * tileTransform.width * BYTES_PER_PIXEL;
     tilePixels.set(from.subarray(srcStart, srcStart + tileTransform.width * BYTES_PER_PIXEL), dstStart);
   }
-  return tilePixels;
+  return tilePixels.buffer;
+}
+function extractTile(from, fromWidth, tileTransform) {
+  if (from instanceof ImageBitmap) {
+    return extractTileFromOriginalImage(from, tileTransform);
+  } else {
+    return extractTileFromResizedImage(from, fromWidth, tileTransform);
+  }
 }
 
 // src/worker/create-tile-transforms.ts
@@ -264,7 +280,7 @@ function createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, in
         unsharpThreshold
       };
       const tile = extractTile(from, fromWidth, tileTransform);
-      tileTransforms.push({ tile: tile.buffer, ...tileTransform });
+      tileTransforms.push({ tile, ...tileTransform });
     }
   }
   return tileTransforms;
@@ -275,21 +291,14 @@ async function createResizeMetadata(params) {
   let from;
   let fromWidth;
   let fromHeight;
+  let stages;
   let toWidth;
   let toHeight;
-  let stages;
   if (params.image instanceof Blob) {
     const imageBitmap = await createImageBitmap(params.image);
-    const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
-    const context = canvas.getContext("2d");
-    if (!context)
-      throw new Error("Canvas 2D context not supported");
-    context.drawImage(imageBitmap, 0, 0);
-    const imageData = context.getImageData(0, 0, imageBitmap.width, imageBitmap.height);
-    from = imageData.data;
+    from = imageBitmap;
     fromWidth = imageBitmap.width;
     fromHeight = imageBitmap.height;
-    imageBitmap.close();
     const widthRatio = params.maxDimension / fromWidth;
     const heightRatio = params.maxDimension / fromHeight;
     const scaleFactor = Math.min(widthRatio, heightRatio, 1);
@@ -305,13 +314,9 @@ async function createResizeMetadata(params) {
   toWidth = stages[0].toWidth;
   toHeight = stages[0].toHeight;
   const tileTransforms = createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, params.tileOptions.initialSize, params.tileOptions.filterPadding, params.tileOptions.filter, params.tileOptions.unsharpAmount, params.tileOptions.unsharpRadius, params.tileOptions.unsharpThreshold);
-  return {
-    from: from.buffer,
-    fromWidth,
-    fromHeight,
-    tileTransforms,
-    stages
-  };
+  if (from instanceof ImageBitmap)
+    from.close();
+  return { tileTransforms, stages };
 }
 
 // src/main/place-tile.ts
@@ -884,14 +889,30 @@ function createResizeStages(fromWidth, fromHeight, toWidth, toHeight, initialTil
 }
 
 // src/worker/extract-tile.ts
-function extractTile(from, fromWidth, tileTransform) {
+function extractTileFromOriginalImage(from, tileTransform) {
+  const tempCanvas = new OffscreenCanvas(tileTransform.width, tileTransform.height);
+  const tempContext = tempCanvas.getContext("2d");
+  if (!tempContext)
+    throw new Error("Canvas 2D context not supported");
+  tempContext.globalCompositeOperation = "copy";
+  tempContext.drawImage(from, tileTransform.x, tileTransform.y, tileTransform.width, tileTransform.height, 0, 0, tileTransform.width, tileTransform.height);
+  return tempContext.getImageData(0, 0, tileTransform.width, tileTransform.height).data.buffer;
+}
+function extractTileFromResizedImage(from, fromWidth, tileTransform) {
   const tilePixels = new Uint8ClampedArray(tileTransform.width * tileTransform.height * BYTES_PER_PIXEL);
   for (let row = 0;row < tileTransform.height; row++) {
     const srcStart = ((tileTransform.y + row) * fromWidth + tileTransform.x) * BYTES_PER_PIXEL;
     const dstStart = row * tileTransform.width * BYTES_PER_PIXEL;
     tilePixels.set(from.subarray(srcStart, srcStart + tileTransform.width * BYTES_PER_PIXEL), dstStart);
   }
-  return tilePixels;
+  return tilePixels.buffer;
+}
+function extractTile(from, fromWidth, tileTransform) {
+  if (from instanceof ImageBitmap) {
+    return extractTileFromOriginalImage(from, tileTransform);
+  } else {
+    return extractTileFromResizedImage(from, fromWidth, tileTransform);
+  }
 }
 
 // src/worker/create-tile-transforms.ts
@@ -958,7 +979,7 @@ function createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, in
         unsharpThreshold
       };
       const tile = extractTile(from, fromWidth, tileTransform);
-      tileTransforms.push({ tile: tile.buffer, ...tileTransform });
+      tileTransforms.push({ tile, ...tileTransform });
     }
   }
   return tileTransforms;
@@ -969,21 +990,14 @@ async function createResizeMetadata(params) {
   let from;
   let fromWidth;
   let fromHeight;
+  let stages;
   let toWidth;
   let toHeight;
-  let stages;
   if (params.image instanceof Blob) {
     const imageBitmap = await createImageBitmap(params.image);
-    const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
-    const context = canvas.getContext("2d");
-    if (!context)
-      throw new Error("Canvas 2D context not supported");
-    context.drawImage(imageBitmap, 0, 0);
-    const imageData = context.getImageData(0, 0, imageBitmap.width, imageBitmap.height);
-    from = imageData.data;
+    from = imageBitmap;
     fromWidth = imageBitmap.width;
     fromHeight = imageBitmap.height;
-    imageBitmap.close();
     const widthRatio = params.maxDimension / fromWidth;
     const heightRatio = params.maxDimension / fromHeight;
     const scaleFactor = Math.min(widthRatio, heightRatio, 1);
@@ -999,13 +1013,9 @@ async function createResizeMetadata(params) {
   toWidth = stages[0].toWidth;
   toHeight = stages[0].toHeight;
   const tileTransforms = createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, params.tileOptions.initialSize, params.tileOptions.filterPadding, params.tileOptions.filter, params.tileOptions.unsharpAmount, params.tileOptions.unsharpRadius, params.tileOptions.unsharpThreshold);
-  return {
-    from: from.buffer,
-    fromWidth,
-    fromHeight,
-    tileTransforms,
-    stages
-  };
+  if (from instanceof ImageBitmap)
+    from.close();
+  return { tileTransforms, stages };
 }
 
 // src/worker/multimath/resize-filter-info.ts
@@ -1377,21 +1387,15 @@ function transformTile(tileTransform) {
 // src/worker/worker.ts
 var onTask1Message = async (taskMessage) => {
   const { taskId, squishId, taskType, image, maxDimension, tileOptions } = taskMessage;
-  const result = await createResizeMetadata({ image, maxDimension, tileOptions });
+  const { tileTransforms, stages } = await createResizeMetadata({ image, maxDimension, tileOptions });
   const taskResult = {
     taskId,
     squishId,
     taskType,
-    output: {
-      from: result.from,
-      fromWidth: result.fromWidth,
-      fromHeight: result.fromHeight,
-      tileTransforms: result.tileTransforms,
-      stages: result.stages
-    }
+    output: { tileTransforms, stages }
   };
-  const tiles = result.tileTransforms.map((tileTransform) => tileTransform.tile);
-  self.postMessage(taskResult, [result.from, ...tiles]);
+  const tiles = tileTransforms.map((tileTransform) => tileTransform.tile);
+  self.postMessage(taskResult, tiles);
 };
 function onTask2Message(taskMessage) {
   const { taskId, squishId, taskType, tileTransform } = taskMessage;
@@ -1543,9 +1547,6 @@ class TaskQueue {
     const { squishId, output } = taskResult;
     const toWidth = output.stages[0].toWidth;
     const toHeight = output.stages[0].toHeight;
-    squishContext.from = new Uint8ClampedArray(output.from);
-    squishContext.fromWidth = output.fromWidth;
-    squishContext.fromHeight = output.fromHeight;
     squishContext.to = new Uint8ClampedArray(toWidth * toHeight * BYTES_PER_PIXEL);
     squishContext.toWidth = toWidth;
     squishContext.toHeight = toHeight;
@@ -1617,9 +1618,6 @@ class TaskQueue {
       this.#squishContexts.set(taskId, {
         maxDimension: taskData.maxDimension,
         tileOptions: taskData.tileOptions,
-        from: null,
-        fromWidth: 0,
-        fromHeight: 0,
         to: null,
         toWidth: 0,
         toHeight: 0,
@@ -1647,17 +1645,11 @@ class PicSquish {
   }
   async#squishOnMainThread(blob, maxDimension, tileOptions) {
     let resizedImage = null;
-    let from;
-    let fromWidth;
-    let fromHeight;
     let to;
     let toWidth;
     let toHeight;
     for (;; ) {
       const metadata = await createResizeMetadata({ image: resizedImage || blob, maxDimension, tileOptions });
-      from = new Uint8ClampedArray(metadata.from);
-      fromWidth = metadata.fromWidth;
-      fromHeight = metadata.fromHeight;
       toWidth = metadata.stages[0].toWidth;
       toHeight = metadata.stages[0].toHeight;
       to = new Uint8ClampedArray(toWidth * toHeight * BYTES_PER_PIXEL);
@@ -1695,8 +1687,7 @@ class PicSquish {
       unsharpRadius,
       unsharpThreshold
     };
-    if (useMainThread)
-      return await this.#squishOnMainThread(blob, maxDimension, tileOptions);
+    return await this.#squishOnMainThread(blob, maxDimension, tileOptions);
     return taskQueue.add({ image: blob, maxDimension, tileOptions }, maxWorkerPoolSize, maxWorkerPoolIdleTime);
   }
 }

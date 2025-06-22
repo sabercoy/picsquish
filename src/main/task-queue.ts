@@ -18,9 +18,6 @@ import { workerPool } from './worker-pool'
 type SquishContext = {
   maxDimension: TaskData1['maxDimension']
   tileOptions: TaskData1['tileOptions']
-  from: Uint8ClampedArray | null
-  fromWidth: number
-  fromHeight: number
   to: Uint8ClampedArray | null
   toWidth: number
   toHeight: number
@@ -93,9 +90,6 @@ class TaskQueue {
     const toWidth = output.stages[0].toWidth
     const toHeight = output.stages[0].toHeight
 
-    squishContext.from = new Uint8ClampedArray(output.from)
-    squishContext.fromWidth = output.fromWidth
-    squishContext.fromHeight = output.fromHeight
     squishContext.to = new Uint8ClampedArray(toWidth * toHeight * BYTES_PER_PIXEL)
     squishContext.toWidth = toWidth
     squishContext.toHeight = toHeight
@@ -177,9 +171,6 @@ class TaskQueue {
       this.#squishContexts.set(taskId, {
         maxDimension: taskData.maxDimension,
         tileOptions: taskData.tileOptions,
-        from: null,
-        fromWidth: 0,
-        fromHeight: 0,
         to: null,
         toWidth: 0,
         toHeight: 0,

@@ -13,18 +13,12 @@ export class PicSquish {
 
   async #squishOnMainThread(blob: Blob, maxDimension: number, tileOptions: TileOptions) {
     let resizedImage: ResizedImage | null = null
-    let from: Uint8ClampedArray
-    let fromWidth: number
-    let fromHeight: number
     let to: Uint8ClampedArray
     let toWidth: number
     let toHeight: number
 
     for (;;) {
       const metadata = await createResizeMetadata({ image: resizedImage || blob, maxDimension, tileOptions })
-      from = new Uint8ClampedArray(metadata.from)
-      fromWidth = metadata.fromWidth
-      fromHeight = metadata.fromHeight
       toWidth = metadata.stages[0].toWidth
       toHeight = metadata.stages[0].toHeight
       to = new Uint8ClampedArray(toWidth * toHeight * BYTES_PER_PIXEL)

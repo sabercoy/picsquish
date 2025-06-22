@@ -12,24 +12,18 @@ import { transformTile } from './transform-tile'
 const onTask1Message = async (taskMessage: TaskMessage1) => {
   const { taskId, squishId, taskType, image, maxDimension, tileOptions } = taskMessage
   
-  const result = await createResizeMetadata({ image, maxDimension, tileOptions })
+  const { tileTransforms, stages } = await createResizeMetadata({ image, maxDimension, tileOptions })
   
   const taskResult: TaskResult1 = {
     taskId,
     squishId,
     taskType,
-    output: {
-      from: result.from,
-      fromWidth: result.fromWidth,
-      fromHeight: result.fromHeight,
-      tileTransforms: result.tileTransforms,
-      stages: result.stages,
-    }
+    output: { tileTransforms, stages },
   }
 
-  const tiles = result.tileTransforms.map(tileTransform => tileTransform.tile)
+  const tiles = tileTransforms.map(tileTransform => tileTransform.tile)
 
-  self.postMessage(taskResult, [result.from, ...tiles])
+  self.postMessage(taskResult, tiles)
 }
 
 function onTask2Message(taskMessage: TaskMessage2) {

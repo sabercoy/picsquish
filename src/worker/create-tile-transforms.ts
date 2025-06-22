@@ -20,7 +20,7 @@ function pixelCeil(x: number) {
 }
 
 export function createTileTransforms(
-  from: Uint8ClampedArray,
+  from: ImageBitmap | Uint8ClampedArray,
   fromWidth: number,
   fromHeight: number,
   toWidth: number,
@@ -88,7 +88,7 @@ export function createTileTransforms(
 
       const tile = extractTile(from, fromWidth, tileTransform)
 
-      tileTransforms.push({ tile: tile.buffer, ...tileTransform })
+      tileTransforms.push({ tile, ...tileTransform })
     }
   }
 

@@ -1,8 +1,11 @@
-import { CreateResizeMetadataParams, ResizeStage } from '../common';
+import { ResizedImage, ResizeStage, TileOptions } from '../common';
+type CreateResizeMetadataParams = {
+    image: Blob | ResizedImage;
+    maxDimension: number;
+    tileOptions: TileOptions;
+};
 export declare function createResizeMetadata(params: CreateResizeMetadataParams): Promise<{
-    from: ArrayBufferLike;
-    fromWidth: number;
-    fromHeight: number;
     tileTransforms: import("../common").TileTransform[];
     stages: ResizeStage[];
 }>;
+export {};

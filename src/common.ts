@@ -66,12 +66,6 @@ export type ResizedImage = {
   stages: ResizeStage[]
 }
 
-export type CreateResizeMetadataParams = {
-  image: Blob | ResizedImage
-  maxDimension: number
-  tileOptions: TileOptions
-}
-
 export enum TaskType {
   CreateResizeMetadata,
   TransformTile,
@@ -111,9 +105,6 @@ export type TaskResult = {
 
 export type TaskResult1 = TaskResult & {
   output: {
-    from: ArrayBufferLike
-    fromWidth: number
-    fromHeight: number
     tileTransforms: TileTransform[]
     stages: ResizeStage[]
   }

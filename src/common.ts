@@ -11,12 +11,22 @@ export class SquishResult {
     this.height = height
   }
 
-  toImageData(): ImageData {
+  toImageData() {
     return new ImageData(this.raw, this.width, this.height)
   }
 
-  toImageBitmap(): Promise<ImageBitmap> {
+  toImageBitmap() {
     return createImageBitmap(this.toImageData())
+  }
+
+  toCanvas() {
+    const canvas = document.createElement('canvas')
+    canvas.width = this.width
+    canvas.height = this.height
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Picsquish error: canvas 2D context not supported')
+    context.putImageData(this.toImageData(), 0, 0)
+    return canvas
   }
 
   toBlob(type: string = 'image/png') {

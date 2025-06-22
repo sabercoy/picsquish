@@ -41,7 +41,6 @@ const squishResult = await squish(image, maxDimension, options)
   - __tileSize__ - the target width and height of each tile for processing
   - __filter__ - box | hamming | lanczos2 | lanczos3 | mks2013
   - __unsharpAmount__ - (from pica): >=0. Default = 0 (off). Usually value between 100 to 200 is good. Note, mks2013 filter already does optimal sharpening.
-
   - __unsharpRadius__ - (from pica): 0.5..2.0. Radius of Gaussian blur. If it is less than 0.5, Unsharp Mask is off. Big values are clamped to 2.0.
   - __unsharpThreshold__ - (from pica): 0..255. Default = 0. Threshold for applying unsharp mask.
 

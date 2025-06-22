@@ -6,6 +6,7 @@ export declare class SquishResult {
     constructor(raw: Uint8ClampedArray<ArrayBuffer>, width: number, height: number);
     toImageData(): ImageData;
     toImageBitmap(): Promise<ImageBitmap>;
+    toCanvas(): HTMLCanvasElement;
     toBlob(type?: string): Promise<Blob>;
 }
 export type InitialImage = Blob | ImageBitmap;

@@ -1,10 +1,8 @@
 import { squish } from './picsquish.js'
 
-const SM_IMAGE_MAX_DIMENSION = 800
-
-const createResizedCanvas = async (imageElement, maxDimension) => {
-  const originalWidth = imageElement.width
-  const originalHeight = imageElement.height
+const createResizedCanvas = (imageBitmap, maxDimension) => {
+  const originalWidth = imageBitmap.width
+  const originalHeight = imageBitmap.height
 
   const widthRatio = maxDimension / originalWidth
   const heightRatio = maxDimension / originalHeight
@@ -19,15 +17,17 @@ const createResizedCanvas = async (imageElement, maxDimension) => {
   return canvas
 }
 
-const imageUploadMainThread = document.getElementById('image-upload-main-thread')
+const imageUploadCanvas = document.getElementById('image-upload-canvas')
 const imageUploadPica = document.getElementById('image-upload-pica')
 const imageUploadPicsquish = document.getElementById('image-upload-picsquish')
-const imageGrid = document.getElementById('image-grid')
+const imageGrid1 = document.getElementById('image-grid-1')
+const imageGrid2 = document.getElementById('image-grid-2')
+const imageGrid3 = document.getElementById('image-grid-3')
 
 let remainingCount = Infinity
 let start
 
-const addCanvasToGrid = (canvas) => {
+const addCanvasToGrid = (canvas, imageGrid) => {
   canvas.style.width = '100%'
   canvas.style.height = '100%'
   canvas.style.objectFit = 'contain'
@@ -43,66 +43,96 @@ const count = document.getElementById('count')
 
 setInterval(() => {
   count.innerText = parseInt(count.innerText) + 1
-}, 50)
+}, 30)
 
-const useMainThread = async (blob) => {
-  const imageBitmap = await createImageBitmap(blob)
-  const newWidth = imageBitmap.width / 4
-  const newHeight = imageBitmap.height / 4
-  const offscreenCanvas = new OffscreenCanvas(newWidth, newHeight)
-  const ctx = offscreenCanvas.getContext('2d')
-  ctx.drawImage(imageBitmap, 0, 0, newWidth, newHeight)
-  const resizedImageBitmap = offscreenCanvas.transferToImageBitmap()
-  return resizedImageBitmap
+const resizeWithCanvas = async (blob, maxDimension) => {
+  const bitmap = await createImageBitmap(blob)
+  const { width, height } = bitmap
+  const scale = Math.min(maxDimension / width, maxDimension / height, 1)
+
+  const scaledWidth = Math.round(width * scale)
+  const scaledHeight = Math.round(height * scale)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = scaledWidth
+  canvas.height = scaledHeight
+
+  const ctx = canvas.getContext('2d')
+  ctx.drawImage(bitmap, 0, 0, scaledWidth, scaledHeight)
+
+  return canvas
 }
 
-imageUploadMainThread.addEventListener('change', async (event) => {
-  imageGrid.innerHTML = ''
+const getInputs = () => {
+  const maxDimension = parseInt(document.getElementById('max-dimension').textContent)
+  const tileSize = parseInt(document.getElementById('tile-size').textContent)
+  const useMainThread = document.getElementById('use-main-thread').checked
+  const poolSize = parseInt(document.getElementById('pool-size').textContent)
+  const poolIdle = parseInt(document.getElementById('pool-idle').textContent)
+  const selectedFilter = document.querySelector('input[name="filter"]:checked').value
+  const unsharpAmount = parseInt(document.getElementById('unsharp-amount').textContent)
+  const unsharpRadius = parseFloat(document.getElementById('unsharp-radius').textContent)
+  const unsharpThreshold = parseInt(document.getElementById('unsharp-threshold').textContent)
+  return { maxDimension, tileSize, useMainThread, poolSize, poolIdle, selectedFilter, unsharpAmount, unsharpRadius, unsharpThreshold }
+}
+
+imageUploadCanvas.addEventListener('change', async (event) => {
+  const inputs = getInputs()
+
+  imageGrid1.innerHTML = ''
   remainingCount = event.target.files.length
   start = Date.now()
 
-  Array.from(event.target.files).map(file => useMainThread(file).then(imageBitmap => {
-    const canvas = document.createElement('canvas')
-    const context = canvas.getContext('2d')
-    canvas.width = imageBitmap.width
-    canvas.height = imageBitmap.height
-    context.drawImage(imageBitmap, 0, 0)
-    addCanvasToGrid(canvas)
+  Array.from(event.target.files).map(file => resizeWithCanvas(file, inputs.maxDimension).then(resizedCanvas => {
+    addCanvasToGrid(resizedCanvas, imageGrid1)
   }))
 })
 
-const p = pica({ features: ['js', 'ww'] })
-const createResizedPicaCanvas = (originalImageElement, maxDimension) => new Promise((resolve, reject) => {
-  createResizedCanvas(originalImageElement, maxDimension)
-  .then(canvas => p.resize(originalImageElement, canvas))
-  .then(resolve)
-  .catch(reject)
-})
-
 imageUploadPica.addEventListener('change', async (event) => {
-  imageGrid.innerHTML = ''
+  const inputs = getInputs()
+
+  imageGrid2.innerHTML = ''
   remainingCount = event.target.files.length
   start = Date.now()
 
-  const imageBitmapPromises = []
-  for (let i = 0; i < event.target.files.length; i++) {
-    const file = event.target.files[i]
-    imageBitmapPromises.push(createImageBitmap(file))
-  }
-  
-  const imageBitmaps = await Promise.all(imageBitmapPromises)
-  imageBitmaps.forEach(imageBitmap => {
-    createResizedPicaCanvas(imageBitmap, 20/* SM_IMAGE_MAX_DIMENSION */)
-    .then(addCanvasToGrid)
+  const p = pica({
+    features: inputs.useMainThread ? ['js'] : ['js', 'ww'],
+    tile: inputs.tileSize,
+    concurrency: inputs.poolSize,
+    idle: inputs.poolIdle,
   })
+
+  const resize = (imageBitmap, toCanvas) => p.resize(imageBitmap, toCanvas, {
+    filter: inputs.selectedFilter,
+    unsharpAmount: inputs.unsharpAmount,
+    unsharpRadius: inputs.unsharpRadius,
+    unsharpThreshold: inputs.unsharpThreshold,
+  })
+
+  Array.from(event.target.files).forEach(file => createImageBitmap(file).then(imageBitmap => {
+    return resize(imageBitmap, createResizedCanvas(imageBitmap, inputs.maxDimension))
+  }).then(resizedCanvas => addCanvasToGrid(resizedCanvas, imageGrid2)))
 })
 
 imageUploadPicsquish.addEventListener('change', async (event) => {
-  imageGrid.innerHTML = ''
+  const inputs = getInputs()
+
+  imageGrid3.innerHTML = ''
   remainingCount = event.target.files.length
   start = Date.now()
 
-  Array.from(event.target.files).map(file => squish(file, 20).then(result => result.toImageBitmap()).then(imageBitmap => {
+  const resize = (file) => squish(file, inputs.maxDimension, {
+    tileSize: inputs.tileSize,
+    useMainThread: inputs.useMainThread,
+    maxWorkerPoolSize: inputs.poolSize,
+    maxWorkerIdleTime: inputs.poolIdle,
+    filter: inputs.selectedFilter.value,
+    unsharpAmount: inputs.unsharpAmount,
+    unsharpRadius: inputs.unsharpRadius,
+    unsharpThreshold: inputs.unsharpThreshold,
+  })
+
+  Array.from(event.target.files).forEach(file => resize(file).then(result => result.toImageBitmap()).then(imageBitmap => {
     const canvas = document.createElement('canvas')
     document.body.appendChild(canvas)
     const context = canvas.getContext('2d')
@@ -112,6 +142,6 @@ imageUploadPicsquish.addEventListener('change', async (event) => {
 
     context.drawImage(imageBitmap, 0, 0)
 
-    addCanvasToGrid(canvas)
+    addCanvasToGrid(canvas, imageGrid3)
   }).catch(error => console.log(error)))
 })

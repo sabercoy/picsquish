@@ -15,7 +15,7 @@ This project aims to be a modern rewrite of [__pica__](https://github.com/nodeca
 
 Purpose
 ---------------------------------
-This project is aimed for resizing images within the browser so that no external service is needed. The resize result from this project is an improvement on the result that would be given from the browser's Canvas API, for it features more detail, less artifacts, and the computation is offloaded from the main thread.
+This project is aimed for resizing images within the browser so that no external service is needed. The resize result from this project is an improvement on the result that would be given from the browser's Canvas API, for it features more detail, less artifacts/pixelation, and the computation is offloaded from the main thread.
 
 Usage Example
 ---------------------------------

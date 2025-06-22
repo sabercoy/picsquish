@@ -2208,7 +2208,6 @@ Pica.prototype.__landTileData = function (tile, result, stageEnv) {
 };
 
 Pica.prototype.__tileAndResize = function (from, to, opts) {
-  console.log(to.width, to.height);
   var _this3 = this;
 
   var stageEnv = {
@@ -2356,21 +2355,6 @@ Pica.prototype.__processStages = function (stages, from, to, opts) {
     // create temporary canvas
     tmpCanvas = this.options.createCanvas(toWidth, toHeight);
   }
-
-  console.log('--------------------')
-  console.log('from', from)
-  console.log('to', isLastStage ? to : tmpCanvas)
-  console.log('currentWidth', opts.width)
-  console.log('currentHeight', opts.height)
-  console.log('currentToWidth', opts.toWidth)
-  console.log('currentToHeight', opts.toHeight)
-  console.log('srcTileSize', opts.srcTileSize)
-  console.log('destTileBorder', opts.destTileBorder)
-  console.log('filter', opts.filter)
-  console.log('unsharpAmount', opts.unsharpAmount)
-  console.log('unsharpRadius', opts.unsharpRadius)
-  console.log('unsharpThreshold', opts.unsharpThreshold)
-  console.log('--------------------')
 
   return this.__tileAndResize(from, isLastStage ? to : tmpCanvas, opts).then(function () {
     if (isLastStage) return to;

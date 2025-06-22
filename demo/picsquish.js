@@ -16,8 +16,8 @@ var __toESM = (mod, isNodeMode, target) => {
 };
 var __commonJS = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
 
-// node_modules/glur/index.js
-var require_glur = __commonJS((exports, module) => {
+// node_modules/glur/mono16.js
+var require_mono16 = __commonJS((exports, module) => {
   var a0;
   var a1;
   var a2;
@@ -41,13 +41,8 @@ var require_glur = __commonJS((exports, module) => {
     right_corner = (a2 + a3) / (1 - b1 - b2);
     return new Float32Array([a0, a1, a2, a3, b1, b2, left_corner, right_corner]);
   }
-  function convolveRGBA(src, out, line, coeff, width, height) {
-    var rgba;
-    var prev_src_r, prev_src_g, prev_src_b, prev_src_a;
-    var curr_src_r, curr_src_g, curr_src_b, curr_src_a;
-    var curr_out_r, curr_out_g, curr_out_b, curr_out_a;
-    var prev_out_r, prev_out_g, prev_out_b, prev_out_a;
-    var prev_prev_out_r, prev_prev_out_g, prev_prev_out_b, prev_prev_out_a;
+  function convolveMono16(src, out, line, coeff, width, height) {
+    var prev_src, curr_src, curr_out, prev_out, prev_prev_out;
     var src_index, out_index, line_index;
     var i, j;
     var coeff_a0, coeff_a1, coeff_b1, coeff_b2;
@@ -55,115 +50,55 @@ var require_glur = __commonJS((exports, module) => {
       src_index = i * width;
       out_index = i;
       line_index = 0;
-      rgba = src[src_index];
-      prev_src_r = rgba & 255;
-      prev_src_g = rgba >> 8 & 255;
-      prev_src_b = rgba >> 16 & 255;
-      prev_src_a = rgba >> 24 & 255;
-      prev_prev_out_r = prev_src_r * coeff[6];
-      prev_prev_out_g = prev_src_g * coeff[6];
-      prev_prev_out_b = prev_src_b * coeff[6];
-      prev_prev_out_a = prev_src_a * coeff[6];
-      prev_out_r = prev_prev_out_r;
-      prev_out_g = prev_prev_out_g;
-      prev_out_b = prev_prev_out_b;
-      prev_out_a = prev_prev_out_a;
+      prev_src = src[src_index];
+      prev_prev_out = prev_src * coeff[6];
+      prev_out = prev_prev_out;
       coeff_a0 = coeff[0];
       coeff_a1 = coeff[1];
       coeff_b1 = coeff[4];
       coeff_b2 = coeff[5];
       for (j = 0;j < width; j++) {
-        rgba = src[src_index];
-        curr_src_r = rgba & 255;
-        curr_src_g = rgba >> 8 & 255;
-        curr_src_b = rgba >> 16 & 255;
-        curr_src_a = rgba >> 24 & 255;
-        curr_out_r = curr_src_r * coeff_a0 + prev_src_r * coeff_a1 + prev_out_r * coeff_b1 + prev_prev_out_r * coeff_b2;
-        curr_out_g = curr_src_g * coeff_a0 + prev_src_g * coeff_a1 + prev_out_g * coeff_b1 + prev_prev_out_g * coeff_b2;
-        curr_out_b = curr_src_b * coeff_a0 + prev_src_b * coeff_a1 + prev_out_b * coeff_b1 + prev_prev_out_b * coeff_b2;
-        curr_out_a = curr_src_a * coeff_a0 + prev_src_a * coeff_a1 + prev_out_a * coeff_b1 + prev_prev_out_a * coeff_b2;
-        prev_prev_out_r = prev_out_r;
-        prev_prev_out_g = prev_out_g;
-        prev_prev_out_b = prev_out_b;
-        prev_prev_out_a = prev_out_a;
-        prev_out_r = curr_out_r;
-        prev_out_g = curr_out_g;
-        prev_out_b = curr_out_b;
-        prev_out_a = curr_out_a;
-        prev_src_r = curr_src_r;
-        prev_src_g = curr_src_g;
-        prev_src_b = curr_src_b;
-        prev_src_a = curr_src_a;
-        line[line_index] = prev_out_r;
-        line[line_index + 1] = prev_out_g;
-        line[line_index + 2] = prev_out_b;
-        line[line_index + 3] = prev_out_a;
-        line_index += 4;
+        curr_src = src[src_index];
+        curr_out = curr_src * coeff_a0 + prev_src * coeff_a1 + prev_out * coeff_b1 + prev_prev_out * coeff_b2;
+        prev_prev_out = prev_out;
+        prev_out = curr_out;
+        prev_src = curr_src;
+        line[line_index] = prev_out;
+        line_index++;
         src_index++;
       }
       src_index--;
-      line_index -= 4;
+      line_index--;
       out_index += height * (width - 1);
-      rgba = src[src_index];
-      prev_src_r = rgba & 255;
-      prev_src_g = rgba >> 8 & 255;
-      prev_src_b = rgba >> 16 & 255;
-      prev_src_a = rgba >> 24 & 255;
-      prev_prev_out_r = prev_src_r * coeff[7];
-      prev_prev_out_g = prev_src_g * coeff[7];
-      prev_prev_out_b = prev_src_b * coeff[7];
-      prev_prev_out_a = prev_src_a * coeff[7];
-      prev_out_r = prev_prev_out_r;
-      prev_out_g = prev_prev_out_g;
-      prev_out_b = prev_prev_out_b;
-      prev_out_a = prev_prev_out_a;
-      curr_src_r = prev_src_r;
-      curr_src_g = prev_src_g;
-      curr_src_b = prev_src_b;
-      curr_src_a = prev_src_a;
+      prev_src = src[src_index];
+      prev_prev_out = prev_src * coeff[7];
+      prev_out = prev_prev_out;
+      curr_src = prev_src;
       coeff_a0 = coeff[2];
       coeff_a1 = coeff[3];
       for (j = width - 1;j >= 0; j--) {
-        curr_out_r = curr_src_r * coeff_a0 + prev_src_r * coeff_a1 + prev_out_r * coeff_b1 + prev_prev_out_r * coeff_b2;
-        curr_out_g = curr_src_g * coeff_a0 + prev_src_g * coeff_a1 + prev_out_g * coeff_b1 + prev_prev_out_g * coeff_b2;
-        curr_out_b = curr_src_b * coeff_a0 + prev_src_b * coeff_a1 + prev_out_b * coeff_b1 + prev_prev_out_b * coeff_b2;
-        curr_out_a = curr_src_a * coeff_a0 + prev_src_a * coeff_a1 + prev_out_a * coeff_b1 + prev_prev_out_a * coeff_b2;
-        prev_prev_out_r = prev_out_r;
-        prev_prev_out_g = prev_out_g;
-        prev_prev_out_b = prev_out_b;
-        prev_prev_out_a = prev_out_a;
-        prev_out_r = curr_out_r;
-        prev_out_g = curr_out_g;
-        prev_out_b = curr_out_b;
-        prev_out_a = curr_out_a;
-        prev_src_r = curr_src_r;
-        prev_src_g = curr_src_g;
-        prev_src_b = curr_src_b;
-        prev_src_a = curr_src_a;
-        rgba = src[src_index];
-        curr_src_r = rgba & 255;
-        curr_src_g = rgba >> 8 & 255;
-        curr_src_b = rgba >> 16 & 255;
-        curr_src_a = rgba >> 24 & 255;
-        rgba = (line[line_index] + prev_out_r << 0) + (line[line_index + 1] + prev_out_g << 8) + (line[line_index + 2] + prev_out_b << 16) + (line[line_index + 3] + prev_out_a << 24);
-        out[out_index] = rgba;
+        curr_out = curr_src * coeff_a0 + prev_src * coeff_a1 + prev_out * coeff_b1 + prev_prev_out * coeff_b2;
+        prev_prev_out = prev_out;
+        prev_out = curr_out;
+        prev_src = curr_src;
+        curr_src = src[src_index];
+        out[out_index] = line[line_index] + prev_out;
         src_index--;
-        line_index -= 4;
+        line_index--;
         out_index -= height;
       }
     }
   }
-  function blurRGBA(src, width, height, radius) {
+  function blurMono16(src, width, height, radius) {
     if (!radius) {
       return;
     }
-    var src32 = new Uint32Array(src.buffer);
-    var out = new Uint32Array(src32.length), tmp_line = new Float32Array(Math.max(width, height) * 4);
+    var out = new Uint16Array(src.length), tmp_line = new Float32Array(Math.max(width, height));
     var coeff = gaussCoef(radius);
-    convolveRGBA(src32, out, tmp_line, coeff, width, height, radius);
-    convolveRGBA(out, src32, tmp_line, coeff, height, width, radius);
+    convolveMono16(src, out, tmp_line, coeff, width, height, radius);
+    convolveMono16(out, src, tmp_line, coeff, height, width, radius);
   }
-  module.exports = blurRGBA;
+  module.exports = blurMono16;
 });
 
 // src/common.ts
@@ -183,6 +118,16 @@ class SquishResult {
   }
   toImageBitmap() {
     return createImageBitmap(this.toImageData());
+  }
+  toCanvas() {
+    const canvas = document.createElement("canvas");
+    canvas.width = this.width;
+    canvas.height = this.height;
+    const context = canvas.getContext("2d");
+    if (!context)
+      throw new Error("Picsquish error: canvas 2D context not supported");
+    context.putImageData(this.toImageData(), 0, 0);
+    return canvas;
   }
   toBlob(type = "image/png") {
     const canvas = new OffscreenCanvas(this.width, this.height);
@@ -656,7 +601,7 @@ function resize(tile, filter, tileWidth, tileHeight, tileToWidth, tileToHeight, 
 }
 
 // src/worker/multimath/unsharp-mask.ts
-var import_glur = __toESM(require_glur(), 1);
+var import_mono16 = __toESM(require_mono16(), 1);
 function hsv_v16(img, width, height) {
   let size = width * height;
   let out = new Uint16Array(size);
@@ -681,7 +626,7 @@ function unsharp(img, width, height, amount, radius, threshold) {
   }
   let brightness = hsv_v16(img, width, height);
   let blurred = new Uint16Array(brightness);
-  import_glur.default(blurred, width, height, radius);
+  import_mono16.default(blurred, width, height, radius);
   let amountFp = amount / 100 * 4096 + 0.5 | 0;
   let thresholdFp = threshold << 8;
   let size = width * height;
@@ -740,8 +685,8 @@ var __toESM = (mod, isNodeMode, target) => {
 };
 var __commonJS = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
 
-// node_modules/glur/index.js
-var require_glur = __commonJS((exports, module) => {
+// node_modules/glur/mono16.js
+var require_mono16 = __commonJS((exports, module) => {
   var a0;
   var a1;
   var a2;
@@ -765,13 +710,8 @@ var require_glur = __commonJS((exports, module) => {
     right_corner = (a2 + a3) / (1 - b1 - b2);
     return new Float32Array([a0, a1, a2, a3, b1, b2, left_corner, right_corner]);
   }
-  function convolveRGBA(src, out, line, coeff, width, height) {
-    var rgba;
-    var prev_src_r, prev_src_g, prev_src_b, prev_src_a;
-    var curr_src_r, curr_src_g, curr_src_b, curr_src_a;
-    var curr_out_r, curr_out_g, curr_out_b, curr_out_a;
-    var prev_out_r, prev_out_g, prev_out_b, prev_out_a;
-    var prev_prev_out_r, prev_prev_out_g, prev_prev_out_b, prev_prev_out_a;
+  function convolveMono16(src, out, line, coeff, width, height) {
+    var prev_src, curr_src, curr_out, prev_out, prev_prev_out;
     var src_index, out_index, line_index;
     var i, j;
     var coeff_a0, coeff_a1, coeff_b1, coeff_b2;
@@ -779,115 +719,55 @@ var require_glur = __commonJS((exports, module) => {
       src_index = i * width;
       out_index = i;
       line_index = 0;
-      rgba = src[src_index];
-      prev_src_r = rgba & 255;
-      prev_src_g = rgba >> 8 & 255;
-      prev_src_b = rgba >> 16 & 255;
-      prev_src_a = rgba >> 24 & 255;
-      prev_prev_out_r = prev_src_r * coeff[6];
-      prev_prev_out_g = prev_src_g * coeff[6];
-      prev_prev_out_b = prev_src_b * coeff[6];
-      prev_prev_out_a = prev_src_a * coeff[6];
-      prev_out_r = prev_prev_out_r;
-      prev_out_g = prev_prev_out_g;
-      prev_out_b = prev_prev_out_b;
-      prev_out_a = prev_prev_out_a;
+      prev_src = src[src_index];
+      prev_prev_out = prev_src * coeff[6];
+      prev_out = prev_prev_out;
       coeff_a0 = coeff[0];
       coeff_a1 = coeff[1];
       coeff_b1 = coeff[4];
       coeff_b2 = coeff[5];
       for (j = 0;j < width; j++) {
-        rgba = src[src_index];
-        curr_src_r = rgba & 255;
-        curr_src_g = rgba >> 8 & 255;
-        curr_src_b = rgba >> 16 & 255;
-        curr_src_a = rgba >> 24 & 255;
-        curr_out_r = curr_src_r * coeff_a0 + prev_src_r * coeff_a1 + prev_out_r * coeff_b1 + prev_prev_out_r * coeff_b2;
-        curr_out_g = curr_src_g * coeff_a0 + prev_src_g * coeff_a1 + prev_out_g * coeff_b1 + prev_prev_out_g * coeff_b2;
-        curr_out_b = curr_src_b * coeff_a0 + prev_src_b * coeff_a1 + prev_out_b * coeff_b1 + prev_prev_out_b * coeff_b2;
-        curr_out_a = curr_src_a * coeff_a0 + prev_src_a * coeff_a1 + prev_out_a * coeff_b1 + prev_prev_out_a * coeff_b2;
-        prev_prev_out_r = prev_out_r;
-        prev_prev_out_g = prev_out_g;
-        prev_prev_out_b = prev_out_b;
-        prev_prev_out_a = prev_out_a;
-        prev_out_r = curr_out_r;
-        prev_out_g = curr_out_g;
-        prev_out_b = curr_out_b;
-        prev_out_a = curr_out_a;
-        prev_src_r = curr_src_r;
-        prev_src_g = curr_src_g;
-        prev_src_b = curr_src_b;
-        prev_src_a = curr_src_a;
-        line[line_index] = prev_out_r;
-        line[line_index + 1] = prev_out_g;
-        line[line_index + 2] = prev_out_b;
-        line[line_index + 3] = prev_out_a;
-        line_index += 4;
+        curr_src = src[src_index];
+        curr_out = curr_src * coeff_a0 + prev_src * coeff_a1 + prev_out * coeff_b1 + prev_prev_out * coeff_b2;
+        prev_prev_out = prev_out;
+        prev_out = curr_out;
+        prev_src = curr_src;
+        line[line_index] = prev_out;
+        line_index++;
         src_index++;
       }
       src_index--;
-      line_index -= 4;
+      line_index--;
       out_index += height * (width - 1);
-      rgba = src[src_index];
-      prev_src_r = rgba & 255;
-      prev_src_g = rgba >> 8 & 255;
-      prev_src_b = rgba >> 16 & 255;
-      prev_src_a = rgba >> 24 & 255;
-      prev_prev_out_r = prev_src_r * coeff[7];
-      prev_prev_out_g = prev_src_g * coeff[7];
-      prev_prev_out_b = prev_src_b * coeff[7];
-      prev_prev_out_a = prev_src_a * coeff[7];
-      prev_out_r = prev_prev_out_r;
-      prev_out_g = prev_prev_out_g;
-      prev_out_b = prev_prev_out_b;
-      prev_out_a = prev_prev_out_a;
-      curr_src_r = prev_src_r;
-      curr_src_g = prev_src_g;
-      curr_src_b = prev_src_b;
-      curr_src_a = prev_src_a;
+      prev_src = src[src_index];
+      prev_prev_out = prev_src * coeff[7];
+      prev_out = prev_prev_out;
+      curr_src = prev_src;
       coeff_a0 = coeff[2];
       coeff_a1 = coeff[3];
       for (j = width - 1;j >= 0; j--) {
-        curr_out_r = curr_src_r * coeff_a0 + prev_src_r * coeff_a1 + prev_out_r * coeff_b1 + prev_prev_out_r * coeff_b2;
-        curr_out_g = curr_src_g * coeff_a0 + prev_src_g * coeff_a1 + prev_out_g * coeff_b1 + prev_prev_out_g * coeff_b2;
-        curr_out_b = curr_src_b * coeff_a0 + prev_src_b * coeff_a1 + prev_out_b * coeff_b1 + prev_prev_out_b * coeff_b2;
-        curr_out_a = curr_src_a * coeff_a0 + prev_src_a * coeff_a1 + prev_out_a * coeff_b1 + prev_prev_out_a * coeff_b2;
-        prev_prev_out_r = prev_out_r;
-        prev_prev_out_g = prev_out_g;
-        prev_prev_out_b = prev_out_b;
-        prev_prev_out_a = prev_out_a;
-        prev_out_r = curr_out_r;
-        prev_out_g = curr_out_g;
-        prev_out_b = curr_out_b;
-        prev_out_a = curr_out_a;
-        prev_src_r = curr_src_r;
-        prev_src_g = curr_src_g;
-        prev_src_b = curr_src_b;
-        prev_src_a = curr_src_a;
-        rgba = src[src_index];
-        curr_src_r = rgba & 255;
-        curr_src_g = rgba >> 8 & 255;
-        curr_src_b = rgba >> 16 & 255;
-        curr_src_a = rgba >> 24 & 255;
-        rgba = (line[line_index] + prev_out_r << 0) + (line[line_index + 1] + prev_out_g << 8) + (line[line_index + 2] + prev_out_b << 16) + (line[line_index + 3] + prev_out_a << 24);
-        out[out_index] = rgba;
+        curr_out = curr_src * coeff_a0 + prev_src * coeff_a1 + prev_out * coeff_b1 + prev_prev_out * coeff_b2;
+        prev_prev_out = prev_out;
+        prev_out = curr_out;
+        prev_src = curr_src;
+        curr_src = src[src_index];
+        out[out_index] = line[line_index] + prev_out;
         src_index--;
-        line_index -= 4;
+        line_index--;
         out_index -= height;
       }
     }
   }
-  function blurRGBA(src, width, height, radius) {
+  function blurMono16(src, width, height, radius) {
     if (!radius) {
       return;
     }
-    var src32 = new Uint32Array(src.buffer);
-    var out = new Uint32Array(src32.length), tmp_line = new Float32Array(Math.max(width, height) * 4);
+    var out = new Uint16Array(src.length), tmp_line = new Float32Array(Math.max(width, height));
     var coeff = gaussCoef(radius);
-    convolveRGBA(src32, out, tmp_line, coeff, width, height, radius);
-    convolveRGBA(out, src32, tmp_line, coeff, height, width, radius);
+    convolveMono16(src, out, tmp_line, coeff, width, height, radius);
+    convolveMono16(out, src, tmp_line, coeff, height, width, radius);
   }
-  module.exports = blurRGBA;
+  module.exports = blurMono16;
 });
 
 // src/common.ts
@@ -1355,7 +1235,7 @@ function resize(tile, filter, tileWidth, tileHeight, tileToWidth, tileToHeight, 
 }
 
 // src/worker/multimath/unsharp-mask.ts
-var import_glur = __toESM(require_glur(), 1);
+var import_mono16 = __toESM(require_mono16(), 1);
 function hsv_v16(img, width, height) {
   let size = width * height;
   let out = new Uint16Array(size);
@@ -1380,7 +1260,7 @@ function unsharp(img, width, height, amount, radius, threshold) {
   }
   let brightness = hsv_v16(img, width, height);
   let blurred = new Uint16Array(brightness);
-  import_glur.default(blurred, width, height, radius);
+  import_mono16.default(blurred, width, height, radius);
   let amountFp = amount / 100 * 4096 + 0.5 | 0;
   let thresholdFp = threshold << 8;
   let size = width * height;

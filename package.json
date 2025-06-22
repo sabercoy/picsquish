@@ -1,7 +1,7 @@
 {
   "name": "picsquish",
   "description": "Modern image resizer for browser",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "keywords": [
     "resize",
     "scale",

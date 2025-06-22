@@ -1687,7 +1687,8 @@ class PicSquish {
       unsharpRadius,
       unsharpThreshold
     };
-    return await this.#squishOnMainThread(blob, maxDimension, tileOptions);
+    if (useMainThread)
+      return await this.#squishOnMainThread(blob, maxDimension, tileOptions);
     return taskQueue.add({ image: blob, maxDimension, tileOptions }, maxWorkerPoolSize, maxWorkerPoolIdleTime);
   }
 }

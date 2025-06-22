@@ -1,4 +1,4 @@
-import { PicSquish } from './picsquish.js'
+import { squish } from './picsquish.js'
 
 const SM_IMAGE_MAX_DIMENSION = 800
 
@@ -97,13 +97,12 @@ imageUploadPica.addEventListener('change', async (event) => {
   })
 })
 
-const ps = new PicSquish({ maxDimension: 20 })
 imageUploadPicsquish.addEventListener('change', async (event) => {
   imageGrid.innerHTML = ''
   remainingCount = event.target.files.length
   start = Date.now()
 
-  Array.from(event.target.files).map(file => ps.squish(file).then(imageBitmap => {
+  Array.from(event.target.files).map(file => squish(file, 20).then(imageBitmap => {
     const canvas = document.createElement('canvas')
     document.body.appendChild(canvas)
     const context = canvas.getContext('2d')

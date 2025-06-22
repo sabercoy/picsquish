@@ -1,6 +1,2 @@
-import { Options } from '../common';
-export declare class PicSquish {
-    #private;
-    constructor(globalOptions: Options);
-    squish(blob: Blob, localOptions?: Options): Promise<ImageBitmap>;
-}
+import { InitialImage, Options } from '../common';
+export declare function squish(image: InitialImage, maxDimension: number, options?: Options): Promise<ImageBitmap>;

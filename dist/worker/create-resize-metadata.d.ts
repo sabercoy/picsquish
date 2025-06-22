@@ -1,6 +1,6 @@
-import { ResizedImage, ResizeStage, TileOptions } from '../common';
+import { InitialImage, ResizedImage, ResizeStage, TileOptions } from '../common';
 type CreateResizeMetadataParams = {
-    image: Blob | ResizedImage;
+    image: InitialImage | ResizedImage;
     maxDimension: number;
     tileOptions: TileOptions;
 };

@@ -294,8 +294,8 @@ async function createResizeMetadata(params) {
   let stages;
   let toWidth;
   let toHeight;
-  if (params.image instanceof Blob) {
-    const imageBitmap = await createImageBitmap(params.image);
+  if (params.image instanceof Blob || params.image instanceof ImageBitmap) {
+    const imageBitmap = params.image instanceof ImageBitmap ? params.image : await createImageBitmap(params.image);
     from = imageBitmap;
     fromWidth = imageBitmap.width;
     fromHeight = imageBitmap.height;
@@ -993,8 +993,8 @@ async function createResizeMetadata(params) {
   let stages;
   let toWidth;
   let toHeight;
-  if (params.image instanceof Blob) {
-    const imageBitmap = await createImageBitmap(params.image);
+  if (params.image instanceof Blob || params.image instanceof ImageBitmap) {
+    const imageBitmap = params.image instanceof ImageBitmap ? params.image : await createImageBitmap(params.image);
     from = imageBitmap;
     fromWidth = imageBitmap.width;
     fromHeight = imageBitmap.height;
@@ -1515,7 +1515,8 @@ class TaskQueue {
       maxDimension: task.data.maxDimension,
       tileOptions: task.data.tileOptions
     };
-    workerPool.assignTask(worker, task, taskMessage, []);
+    const transfer = task.data.image instanceof ImageBitmap ? [task.data.image] : [];
+    workerPool.assignTask(worker, task, taskMessage, transfer);
   }
   #assignPriority2Task(worker, task) {
     const taskMessage = {
@@ -1636,60 +1637,52 @@ class TaskQueue {
 var taskQueue = new TaskQueue;
 
 // src/main/picsquish.ts
-class PicSquish {
-  #globalOptions;
-  constructor(globalOptions) {
-    this.#globalOptions = globalOptions;
-  }
-  async#squishOnMainThread(blob, maxDimension, tileOptions) {
-    let resizedImage = null;
-    let to;
-    let toWidth;
-    let toHeight;
-    for (;; ) {
-      const metadata = await createResizeMetadata({ image: resizedImage || blob, maxDimension, tileOptions });
-      toWidth = metadata.stages[0].toWidth;
-      toHeight = metadata.stages[0].toHeight;
-      to = new Uint8ClampedArray(toWidth * toHeight * BYTES_PER_PIXEL);
-      for (const tileTransform of metadata.tileTransforms) {
-        tileTransform.tile = transformTile(tileTransform).buffer;
-        placeTile(to, toWidth, tileTransform);
-      }
-      metadata.stages.shift();
-      resizedImage = { from: to, fromWidth: toWidth, fromHeight: toHeight, stages: metadata.stages };
-      if (!metadata.stages[0])
-        break;
+async function squishOnMainThread(image, maxDimension, tileOptions) {
+  let resizedImage = null;
+  let to;
+  let toWidth;
+  let toHeight;
+  for (;; ) {
+    const metadata = await createResizeMetadata({ image: resizedImage || image, maxDimension, tileOptions });
+    toWidth = metadata.stages[0].toWidth;
+    toHeight = metadata.stages[0].toHeight;
+    to = new Uint8ClampedArray(toWidth * toHeight * BYTES_PER_PIXEL);
+    for (const tileTransform of metadata.tileTransforms) {
+      tileTransform.tile = transformTile(tileTransform).buffer;
+      placeTile(to, toWidth, tileTransform);
     }
-    const imageData = new ImageData(resizedImage.from, resizedImage.fromWidth, resizedImage.fromHeight);
-    return await createImageBitmap(imageData);
+    metadata.stages.shift();
+    resizedImage = { from: to, fromWidth: toWidth, fromHeight: toHeight, stages: metadata.stages };
+    if (!metadata.stages[0])
+      break;
   }
-  async squish(blob, localOptions) {
-    const combinedOptions = localOptions ? { ...this.#globalOptions, ...localOptions } : this.#globalOptions;
-    const maxDimension = combinedOptions.maxDimension;
-    const tileSize = combinedOptions.tileSize || 1024;
-    const filter = combinedOptions.filter || "mks2013";
-    const unsharpAmount = combinedOptions.unsharpAmount || 0;
-    const unsharpRadius = combinedOptions.unsharpRadius || 0;
-    const unsharpThreshold = combinedOptions.unsharpThreshold || 0;
-    const useMainThread = combinedOptions.useMainThread;
-    const hardwareConcurrency = typeof navigator === "undefined" ? 1 : navigator.hardwareConcurrency;
-    const maxWorkerPoolSize = combinedOptions.maxWorkerPoolSize || Math.min(hardwareConcurrency, 4);
-    const maxWorkerPoolIdleTime = combinedOptions.maxWorkerIdleTime || 2000;
-    const FILTER_PADDING = 3;
-    const filterPadding = Math.ceil(Math.max(FILTER_PADDING, 2.5 * unsharpRadius | 0));
-    const tileOptions = {
-      initialSize: tileSize,
-      filterPadding,
-      filter,
-      unsharpAmount,
-      unsharpRadius,
-      unsharpThreshold
-    };
-    if (useMainThread)
-      return await this.#squishOnMainThread(blob, maxDimension, tileOptions);
-    return taskQueue.add({ image: blob, maxDimension, tileOptions }, maxWorkerPoolSize, maxWorkerPoolIdleTime);
-  }
+  const imageData = new ImageData(resizedImage.from, resizedImage.fromWidth, resizedImage.fromHeight);
+  return await createImageBitmap(imageData);
+}
+async function squish(image, maxDimension, options = {}) {
+  const tileSize = options.tileSize || 1024;
+  const filter = options.filter || "mks2013";
+  const unsharpAmount = options.unsharpAmount || 0;
+  const unsharpRadius = options.unsharpRadius || 0;
+  const unsharpThreshold = options.unsharpThreshold || 0;
+  const useMainThread = options.useMainThread;
+  const hardwareConcurrency = typeof navigator === "undefined" ? 1 : navigator.hardwareConcurrency;
+  const maxWorkerPoolSize = options.maxWorkerPoolSize || Math.min(hardwareConcurrency, 4);
+  const maxWorkerPoolIdleTime = options.maxWorkerIdleTime || 2000;
+  const FILTER_PADDING = 3;
+  const filterPadding = Math.ceil(Math.max(FILTER_PADDING, 2.5 * unsharpRadius | 0));
+  const tileOptions = {
+    initialSize: tileSize,
+    filterPadding,
+    filter,
+    unsharpAmount,
+    unsharpRadius,
+    unsharpThreshold
+  };
+  if (useMainThread)
+    return await squishOnMainThread(image, maxDimension, tileOptions);
+  return taskQueue.add({ image, maxDimension, tileOptions }, maxWorkerPoolSize, maxWorkerPoolIdleTime);
 }
 export {
-  PicSquish
+  squish
 };

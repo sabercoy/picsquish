@@ -53,7 +53,8 @@ class TaskQueue {
       tileOptions: task.data.tileOptions,
     }
 
-    workerPool.assignTask(worker, task, taskMessage, [])
+    const transfer = task.data.image instanceof ImageBitmap ? [task.data.image] : []
+    workerPool.assignTask(worker, task, taskMessage, transfer)
   }
 
   #assignPriority2Task(worker: Worker, task: PendingTask2) {

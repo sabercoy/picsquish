@@ -3,6 +3,7 @@ export declare const WORKER_FILE_NAME = "picsquish-worker";
 export declare const DEMO_PATH = "demo";
 export declare const FINAL_PATH = "dist";
 export declare const BYTES_PER_PIXEL = 4;
+export type InitialImage = Blob | ImageBitmap;
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013';
 export type TileOptions = {
     initialSize: number;
@@ -13,7 +14,6 @@ export type TileOptions = {
     unsharpThreshold: number;
 };
 export type Options = {
-    maxDimension: number;
     useMainThread?: boolean;
     maxWorkerPoolSize?: number;
     maxWorkerIdleTime?: number;
@@ -64,13 +64,20 @@ export declare enum TaskType {
 }
 export type TaskId = number;
 export type TaskData1 = {
-    image: Blob | ResizedImage;
+    image: InitialImage | ResizedImage;
     maxDimension: number;
     tileOptions: TileOptions;
 };
 export type TaskData2 = {
     tileTransform: TileTransform;
 };
+export type TaskMessage = {
+    taskId: TaskId;
+    squishId: TaskId;
+    taskType: TaskType;
+};
+export type TaskMessage1 = TaskMessage & TaskData1;
+export type TaskMessage2 = TaskMessage & TaskData2;
 export type PendingTask = {
     id: TaskId;
     squishId: TaskId;
@@ -98,10 +105,3 @@ export type TaskResult2 = TaskResult & {
         tileTransform: TileTransform;
     };
 };
-export type TaskMessage = {
-    taskId: TaskId;
-    squishId: TaskId;
-    taskType: TaskType;
-};
-export type TaskMessage1 = TaskMessage & TaskData1;
-export type TaskMessage2 = TaskMessage & TaskData2;

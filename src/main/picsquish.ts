@@ -1,4 +1,4 @@
-import { BYTES_PER_PIXEL, InitialImage, ResizedImage, TileOptions } from '../common'
+import { BYTES_PER_PIXEL, InitialImage, ResizedImage, SquishResult, TileOptions } from '../common'
 import { createResizeMetadata } from '../worker/create-resize-metadata'
 import { transformTile } from '../worker/transform-tile'
 import { placeTile } from './place-tile'
@@ -17,7 +17,7 @@ type Options = {
 
 async function squishOnMainThread(image: InitialImage, maxDimension: number, tileOptions: TileOptions) {
   let resizedImage: ResizedImage | null = null
-  let to: Uint8ClampedArray
+  let to: Uint8ClampedArray<ArrayBuffer>
   let toWidth: number
   let toHeight: number
 
@@ -37,8 +37,7 @@ async function squishOnMainThread(image: InitialImage, maxDimension: number, til
     if (!metadata.stages[0]) break
   }
 
-  const imageData = new ImageData(resizedImage.from, resizedImage.fromWidth, resizedImage.fromHeight)
-  return await createImageBitmap(imageData)
+  return new SquishResult(to, toWidth, toHeight)
 }
 
 export async function squish(image: InitialImage, maxDimension: number, options: Options = {}) {

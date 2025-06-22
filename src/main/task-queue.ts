@@ -11,6 +11,7 @@ import {
   PendingTask2,
   TaskMessage1,
   TaskMessage2,
+  SquishResult,
 } from '../common'
 import { placeTile } from './place-tile'
 import { workerPool } from './worker-pool'
@@ -18,12 +19,12 @@ import { workerPool } from './worker-pool'
 type SquishContext = {
   maxDimension: TaskData1['maxDimension']
   tileOptions: TaskData1['tileOptions']
-  to: Uint8ClampedArray | null
+  to: Uint8ClampedArray<ArrayBuffer> | null
   toWidth: number
   toHeight: number
   stages: ResizeStage[]
   remainingTileCount: number
-  resolve: (output: ImageBitmap) => void
+  resolve: (result: SquishResult) => void
   reject: (error: Error) => void
 }
 
@@ -116,29 +117,28 @@ class TaskQueue {
     if (squishContext.remainingTileCount) return undefined
 
     squishContext.stages.shift()
+    const nextStage = squishContext.stages[0]
 
-    if (squishContext.stages[0]) {
-      this.#priority1TaskQueue.push({
-        id: createId(),
-        squishId,
-        data: {
-          image: {
-            from: squishContext.to,
-            fromWidth: squishContext.toWidth,
-            fromHeight: squishContext.toHeight,
-            stages: squishContext.stages,
-          },
-          maxDimension: squishContext.maxDimension,
-          tileOptions: squishContext.tileOptions
+    if (!nextStage) return squishContext.resolve(new SquishResult(
+      squishContext.to,
+      squishContext.toWidth,
+      squishContext.toHeight
+    ))
+
+    this.#priority1TaskQueue.push({
+      id: createId(),
+      squishId,
+      data: {
+        image: {
+          from: squishContext.to,
+          fromWidth: squishContext.toWidth,
+          fromHeight: squishContext.toHeight,
+          stages: squishContext.stages,
         },
-      })
-    } else {
-      const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight)
-      createImageBitmap(imageData).then(imageBitmap => {
-        this.#squishContexts.delete(squishId)
-        squishContext.resolve(imageBitmap)
-      })
-    }
+        maxDimension: squishContext.maxDimension,
+        tileOptions: squishContext.tileOptions
+      },
+    })
   }
   
   #onTaskComplete(event: MessageEvent<TaskResult>) {
@@ -166,7 +166,7 @@ class TaskQueue {
       maxWorkerPoolIdleTime,
     )
 
-    return new Promise<ImageBitmap>((resolve, reject) => {
+    return new Promise<SquishResult>((resolve, reject) => {
       const taskId = createId()
       this.#squishContexts.set(taskId, {
         maxDimension: taskData.maxDimension,

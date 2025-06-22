@@ -102,7 +102,7 @@ imageUploadPicsquish.addEventListener('change', async (event) => {
   remainingCount = event.target.files.length
   start = Date.now()
 
-  Array.from(event.target.files).map(file => squish(file, 20).then(imageBitmap => {
+  Array.from(event.target.files).map(file => squish(file, 20).then(result => result.toImageBitmap()).then(imageBitmap => {
     const canvas = document.createElement('canvas')
     document.body.appendChild(canvas)
     const context = canvas.getContext('2d')

@@ -1,4 +1,13 @@
 export declare const BYTES_PER_PIXEL = 4;
+export declare class SquishResult {
+    raw: Uint8ClampedArray<ArrayBuffer>;
+    width: number;
+    height: number;
+    constructor(raw: Uint8ClampedArray<ArrayBuffer>, width: number, height: number);
+    toImageData(): ImageData;
+    toImageBitmap(): Promise<ImageBitmap>;
+    toBlob(type?: string): Promise<Blob>;
+}
 export type InitialImage = Blob | ImageBitmap;
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013';
 export type TileOptions = {

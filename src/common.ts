@@ -1,5 +1,33 @@
 export const BYTES_PER_PIXEL = 4 // channels: RGBA
 
+export class SquishResult {
+  raw: Uint8ClampedArray<ArrayBuffer>
+  width: number
+  height: number
+
+  constructor(raw: Uint8ClampedArray<ArrayBuffer>, width: number, height: number) {
+    this.raw = raw
+    this.width = width
+    this.height = height
+  }
+
+  toImageData(): ImageData {
+    return new ImageData(this.raw, this.width, this.height)
+  }
+
+  toImageBitmap(): Promise<ImageBitmap> {
+    return createImageBitmap(this.toImageData())
+  }
+
+  toBlob(type: string = 'image/png') {
+    const canvas = new OffscreenCanvas(this.width, this.height)
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Picsquish error: canvas 2D context not supported')
+    context.putImageData(this.toImageData(), 0, 0)
+    return canvas.convertToBlob({ type })
+  }
+}
+
 export type InitialImage = Blob | ImageBitmap
 
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013'

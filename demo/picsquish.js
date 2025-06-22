@@ -169,6 +169,31 @@ var require_glur = __commonJS((exports, module) => {
 // src/common.ts
 var BYTES_PER_PIXEL = 4;
 
+class SquishResult {
+  raw;
+  width;
+  height;
+  constructor(raw, width, height) {
+    this.raw = raw;
+    this.width = width;
+    this.height = height;
+  }
+  toImageData() {
+    return new ImageData(this.raw, this.width, this.height);
+  }
+  toImageBitmap() {
+    return createImageBitmap(this.toImageData());
+  }
+  toBlob(type = "image/png") {
+    const canvas = new OffscreenCanvas(this.width, this.height);
+    const context = canvas.getContext("2d");
+    if (!context)
+      throw new Error("Picsquish error: canvas 2D context not supported");
+    context.putImageData(this.toImageData(), 0, 0);
+    return canvas.convertToBlob({ type });
+  }
+}
+
 // src/worker/create-resize-stages.ts
 var MIN_INNER_TILE_SIZE = 2;
 function createResizeStages(fromWidth, fromHeight, toWidth, toHeight, initialTileSize, filterPadding) {
@@ -1570,28 +1595,23 @@ class TaskQueue {
     if (squishContext.remainingTileCount)
       return;
     squishContext.stages.shift();
-    if (squishContext.stages[0]) {
-      this.#priority1TaskQueue.push({
-        id: createId(),
-        squishId,
-        data: {
-          image: {
-            from: squishContext.to,
-            fromWidth: squishContext.toWidth,
-            fromHeight: squishContext.toHeight,
-            stages: squishContext.stages
-          },
-          maxDimension: squishContext.maxDimension,
-          tileOptions: squishContext.tileOptions
-        }
-      });
-    } else {
-      const imageData = new ImageData(squishContext.to, squishContext.toWidth, squishContext.toHeight);
-      createImageBitmap(imageData).then((imageBitmap) => {
-        this.#squishContexts.delete(squishId);
-        squishContext.resolve(imageBitmap);
-      });
-    }
+    const nextStage = squishContext.stages[0];
+    if (!nextStage)
+      return squishContext.resolve(new SquishResult(squishContext.to, squishContext.toWidth, squishContext.toHeight));
+    this.#priority1TaskQueue.push({
+      id: createId(),
+      squishId,
+      data: {
+        image: {
+          from: squishContext.to,
+          fromWidth: squishContext.toWidth,
+          fromHeight: squishContext.toHeight,
+          stages: squishContext.stages
+        },
+        maxDimension: squishContext.maxDimension,
+        tileOptions: squishContext.tileOptions
+      }
+    });
   }
   #onTaskComplete(event) {
     const squishContext = this.#squishContexts.get(event.data.squishId);
@@ -1656,8 +1676,7 @@ async function squishOnMainThread(image, maxDimension, tileOptions) {
     if (!metadata.stages[0])
       break;
   }
-  const imageData = new ImageData(resizedImage.from, resizedImage.fromWidth, resizedImage.fromHeight);
-  return await createImageBitmap(imageData);
+  return new SquishResult(to, toWidth, toHeight);
 }
 async function squish(image, maxDimension, options = {}) {
   const tileSize = options.tileSize || 1024;

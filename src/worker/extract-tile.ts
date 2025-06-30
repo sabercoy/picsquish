@@ -1,15 +1,28 @@
 import { BYTES_PER_PIXEL, TileTransform } from '../common'
 
+function clearSafariCanvas(canvas: OffscreenCanvas | null, context: OffscreenCanvasRenderingContext2D | null) {
+  // https://github.com/nodeca/pica/issues/199
+  // https://bugs.webkit.org/show_bug.cgi?id=195325
+  // https://stackoverflow.com/questions/52532614/total-canvas-memory-use-exceeds-the-maximum-limit-safari-12
+  // https://pqina.nl/blog/total-canvas-memory-use-exceeds-the-maximum-limit/
+
+  if (canvas) canvas.width = canvas.height = 0
+  canvas = context = null
+}
+
 function extractTileFromOriginalImage(
   from: ImageBitmap,
   tileTransform: Omit<TileTransform, 'tile'>,
 ) {
-  const tempCanvas = new OffscreenCanvas(tileTransform.width, tileTransform.height)
-  const tempContext = tempCanvas.getContext('2d')
+  let tempCanvas: OffscreenCanvas | null = new OffscreenCanvas(tileTransform.width, tileTransform.height)
+  let tempContext = tempCanvas.getContext('2d')
   if (!tempContext) throw new Error('Picsquish error: canvas 2D context not supported')
   tempContext.globalCompositeOperation = 'copy'
   tempContext.drawImage(from, tileTransform.x, tileTransform.y, tileTransform.width, tileTransform.height, 0, 0, tileTransform.width, tileTransform.height)
-  return tempContext.getImageData(0, 0, tileTransform.width, tileTransform.height).data.buffer as ArrayBuffer
+  const arrayBuffer = tempContext.getImageData(0, 0, tileTransform.width, tileTransform.height).data.buffer as ArrayBuffer
+  clearSafariCanvas(tempCanvas, tempContext)
+
+  return arrayBuffer
 }
 
 function extractTileFromResizedImage(

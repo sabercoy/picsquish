@@ -63,10 +63,6 @@ bun run build
 bun run demo
 ```
 
-Safari Testing
----------------------------------
-There has not been much Safari testing during development. This is planned to take place before 1.0.0.
-
 Firefox Bug
 ---------------------------------
 There is a [__bug__](https://bugzilla.mozilla.org/show_bug.cgi?id=1969390) in Firefox regarding `createImageBitmap()` that causes images to be decoded on the main thread (this is blocking and causes visual stutters). This affects both pica and picsquish.

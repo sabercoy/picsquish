@@ -17,25 +17,30 @@ Purpose
 ---------------------------------
 This project is aimed for resizing images within the browser so that no external service is needed. The resize result from this project is an improvement on the result that would be given from the browser's Canvas API, for it features more detail, less artifacts/pixelation, and the computation is offloaded from the main thread.
 
-Usage Example
+Usage Examples
 ---------------------------------
 ```ts
 import { squish } from 'picsquish'
 
-const result = await squish(input, 400)
-const resizedBlob = await result.toBlob()
+// you can get a single resized image with one input image
+const single = await squish(inputImage, 400)
+const resizedBlob = await single.toBlob()
+
+// you can get multiple resized images with one input image
+const multi = squish(inputImage, [400, 600, 800])
+multi.forEach(p => p.then(r => r.toBlob()))
 ```
 
 API
 ---------------------------------
 > The API is open for suggestions for 1.0.0 release
 ```ts
-const squishResult = await squish(image, maxDimension, options)
+const squishResult = await squish(image, dimensionLimits, options)
 ```
 - __image__ - can be `Blob` or `ImageBitmap`
-- __maxDimension__ - max dimension that the resized image will have
+- __dimensionLimits__ - can be a single input or an array specifying the dimension limit(s) for each resized image
 - __options__ - options are not required and defaults are provided for those not specified
-  - __useMainThread__ - if (for some reason) you want to resize on the main thread
+  - __useMainThread__ - if (for some reason) you want to resize on the main thread and not use web workers
   - __maxWorkerPoolSize__ - the max amount of web workers to allocate for resizing
   - __maxWorkerIdleTime__ - the max amount of idle time before web workers terminate
   - __tileSize__ - the target width and height of each tile for processing
@@ -47,12 +52,12 @@ const squishResult = await squish(image, maxDimension, options)
 > For more context regarding options and intention you can refer to [__pica__](https://github.com/nodeca/pica)
 - __SquishResult__ - the result the squish promise resolves to
   - __raw__ - result `Uint8ClampedArray<ArrayBuffer>`
-  - __width__ - result width
-  - __height__ - result height
-  - __toImageData__ - turns result into ImageData
-  - __toImageBitmap__ - turns result into ImageBitmap
-  - __toCanvas__ - turns result into HTMLCanvasElement
-  - __toBlob__ - turns result into Blob
+  - __width__ - result width `number`
+  - __height__ - result height `number`
+  - __toImageData__ - turns result into `ImageData`
+  - __toImageBitmap__ - turns result into `ImageBitmap`
+  - __toCanvas__ - turns result into `HTMLCanvasElement`
+  - __toBlob__ - turns result into `Blob`
 
 Local Development
 ---------------------------------

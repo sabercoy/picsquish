@@ -383,7 +383,7 @@ function createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, ti
 
 // src/worker/create-resize-metadata.ts
 async function createResizeMetadataForInitialImage(image, tileOptions, dimensionLimits) {
-  const imageBitmap = image instanceof ImageBitmap ? image : await createImageBitmap(image);
+  const imageBitmap = await createImageBitmap(image);
   const resizeMetadata = [];
   for (const dimensionLimit of dimensionLimits) {
     const from = imageBitmap;
@@ -406,7 +406,7 @@ function createResizeMetadataForResizedImage(image, tileOptions) {
   return [{ stages: image.stages, tileTransforms }];
 }
 async function createResizeMetadata(params) {
-  if (params.image instanceof Blob || params.image instanceof ImageBitmap) {
+  if (params.image instanceof Blob) {
     return createResizeMetadataForInitialImage(params.image, params.tileOptions, params.dimensionLimits);
   } else {
     return createResizeMetadataForResizedImage(params.image, params.tileOptions);
@@ -1013,7 +1013,7 @@ function createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, ti
 
 // src/worker/create-resize-metadata.ts
 async function createResizeMetadataForInitialImage(image, tileOptions, dimensionLimits) {
-  const imageBitmap = image instanceof ImageBitmap ? image : await createImageBitmap(image);
+  const imageBitmap = await createImageBitmap(image);
   const resizeMetadata = [];
   for (const dimensionLimit of dimensionLimits) {
     const from = imageBitmap;
@@ -1036,7 +1036,7 @@ function createResizeMetadataForResizedImage(image, tileOptions) {
   return [{ stages: image.stages, tileTransforms }];
 }
 async function createResizeMetadata(params) {
-  if (params.image instanceof Blob || params.image instanceof ImageBitmap) {
+  if (params.image instanceof Blob) {
     return createResizeMetadataForInitialImage(params.image, params.tileOptions, params.dimensionLimits);
   } else {
     return createResizeMetadataForResizedImage(params.image, params.tileOptions);

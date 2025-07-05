@@ -1,4 +1,4 @@
-import { DimensionLimit, InitialImage, SquishResult, TileOptions } from '../common'
+import { DimensionLimit, SquishResult, TileOptions } from '../common'
 import { taskQueue } from './task-queue'
 
 type Options = {
@@ -12,10 +12,10 @@ type Options = {
   unsharpThreshold?: TileOptions['unsharpThreshold']
 }
 
-export function squish(image: InitialImage, dimensionLimits: DimensionLimit, options?: Options): Promise<SquishResult>
-export function squish(image: InitialImage, dimensionLimits: DimensionLimit[], options?: Options): Promise<SquishResult>[]
+export function squish(image: Blob, dimensionLimits: DimensionLimit, options?: Options): Promise<SquishResult>
+export function squish(image: Blob, dimensionLimits: DimensionLimit[], options?: Options): Promise<SquishResult>[]
 
-export function squish(image: InitialImage, dimensionLimits: DimensionLimit | DimensionLimit[], options: Options = {}) {
+export function squish(image: Blob, dimensionLimits: DimensionLimit | DimensionLimit[], options: Options = {}) {
   const tileSize = options.tileSize || 1024
   const filter = options.filter || 'mks2013'
   const unsharpAmount = options.unsharpAmount || 0

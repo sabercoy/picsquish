@@ -10,7 +10,6 @@ export declare class SquishResult {
 }
 export declare const BYTES_PER_PIXEL = 4;
 export type DimensionLimit = number;
-export type InitialImage = Blob | ImageBitmap;
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013';
 export type TileOptions = {
     initialSize: number;
@@ -67,7 +66,7 @@ export type ResizedImage = {
     stages: ResizeStage[];
 };
 export type TaskData1 = {
-    image: InitialImage | ResizedImage;
+    image: Blob | ResizedImage;
     dimensionLimits: DimensionLimit[];
     tileOptions: TileOptions;
 };

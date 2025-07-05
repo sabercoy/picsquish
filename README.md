@@ -37,7 +37,7 @@ API
 ```ts
 const squishResult = await squish(image, dimensionLimits, options)
 ```
-- __image__ - can be `Blob` or `ImageBitmap`
+- __image__ - an image `Blob`
 - __dimensionLimits__ - can be a single input or an array specifying the dimension limit(s) for each resized image
 - __options__ - options are not required and defaults are provided for those not specified
   - __useMainThread__ - if (for some reason) you want to resize on the main thread and not use web workers

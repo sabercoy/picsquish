@@ -1,9 +1,9 @@
 import { createResizeStages } from './create-resize-stages'
 import { createTileTransforms } from './create-tile-transforms'
-import { DimensionLimit, InitialImage, ResizedImage, ResizeStage, TileOptions, TileTransform } from '../common'
+import { DimensionLimit, ResizedImage, ResizeStage, TileOptions, TileTransform } from '../common'
 
 type CreateResizeMetadataParams = {
-  image: InitialImage | ResizedImage
+  image: Blob | ResizedImage
   dimensionLimits: DimensionLimit[]
   tileOptions: TileOptions
 }
@@ -14,11 +14,11 @@ type ResizeMetadata = {
 }
 
 async function createResizeMetadataForInitialImage(
-  image: InitialImage,
+  image: Blob,
   tileOptions: TileOptions,
   dimensionLimits: DimensionLimit[],
 ): Promise<ResizeMetadata[]> {
-  const imageBitmap = image instanceof ImageBitmap ? image : await createImageBitmap(image)
+  const imageBitmap = await createImageBitmap(image)
   const resizeMetadata: ResizeMetadata[] = []
 
   for (const dimensionLimit of dimensionLimits) {
@@ -74,7 +74,7 @@ function createResizeMetadataForResizedImage(
 }
 
 export async function createResizeMetadata(params: CreateResizeMetadataParams) {
-  if (params.image instanceof Blob || params.image instanceof ImageBitmap) {
+  if (params.image instanceof Blob) {
     return createResizeMetadataForInitialImage(params.image, params.tileOptions, params.dimensionLimits)
   } else {
     return createResizeMetadataForResizedImage(params.image, params.tileOptions)

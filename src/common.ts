@@ -40,8 +40,6 @@ export const BYTES_PER_PIXEL = 4 // channels: RGBA
 
 export type DimensionLimit = number
 
-export type InitialImage = Blob | ImageBitmap
-
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013'
 
 export type TileOptions = {
@@ -106,7 +104,7 @@ export type ResizedImage = {
 }
 
 export type TaskData1 = {
-  image: InitialImage | ResizedImage
+  image: Blob | ResizedImage
   dimensionLimits: DimensionLimit[]
   tileOptions: TileOptions
 }

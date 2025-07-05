@@ -148,10 +148,10 @@ class TaskQueue {
   }
 
   #onTask1Complete(squishContext: SquishContext, taskResult: TaskResult1) {
-    const { squishId, output, error } = taskResult
+    const { squishId, output } = taskResult
 
     // if errored on task 1 then consider all workspaces for this squish context rejected
-    if (error) return squishContext.workspaceHandlers.forEach(h => h.reject(error))
+    if (output instanceof Error) return squishContext.workspaceHandlers.forEach(h => h.reject(output))
       
     for (const [workspaceIndex, resizeMetadata] of output.entries()) {
       const toWidth = resizeMetadata.stages[0].toWidth
@@ -175,7 +175,7 @@ class TaskQueue {
   }
 
   #onTask2Complete(squishContext: SquishContext, taskResult: TaskResult2) {
-    const { squishId, workspaceIndex, output, error } = taskResult
+    const { squishId, workspaceIndex, output } = taskResult
 
     // check if workspace exists: it is possible that it errored and cleared while this task was being processed
     if (!squishContext.workspaces.has(workspaceIndex)) return undefined
@@ -186,13 +186,13 @@ class TaskQueue {
     if (!workspaceHandler) throw new Error('Picsquish error: workspaceHandler not found')
     
     // if error then clear the workspace and all remaining associated tasks
-    if (error) {
+    if (output instanceof Error) {
       squishContext.workspaces.delete(workspaceIndex)
       this.#priority2TaskQueue = this.#priority2TaskQueue.filter(t => !(t.squishId === squishId && t.workspaceIndex === workspaceIndex))
-      return workspaceHandler.reject(error)
+      return workspaceHandler.reject(output)
     }
 
-    placeTile(workspace.to, workspace.toWidth, output.tileTransform)
+    placeTile(workspace.to, workspace.toWidth, output)
     --workspace.remainingTileCount
 
     if (workspace.remainingTileCount) return undefined

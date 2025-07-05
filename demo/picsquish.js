@@ -749,27 +749,22 @@ function transformTile(tileTransform) {
 async function onTask1Message(taskMessage) {
   const { taskId, squishId, taskType, data } = taskMessage;
   const { image, dimensionLimits, tileOptions } = data;
-  const output = await createResizeMetadata({ image, dimensionLimits, tileOptions });
-  const taskResult = {
-    taskId,
-    squishId,
-    taskType,
-    output
-  };
-  return taskResult;
+  try {
+    const output = await createResizeMetadata({ image, dimensionLimits, tileOptions });
+    return { taskId, squishId, taskType, output };
+  } catch (error) {
+    return { taskId, squishId, taskType, output: error };
+  }
 }
 function onTask2Message(taskMessage) {
   const { taskId, squishId, workspaceIndex, taskType, data } = taskMessage;
   const { tileTransform } = data;
-  tileTransform.tile = transformTile(tileTransform).buffer;
-  const taskResult = {
-    taskId,
-    squishId,
-    workspaceIndex,
-    taskType,
-    output: { tileTransform }
-  };
-  return taskResult;
+  try {
+    tileTransform.tile = transformTile(tileTransform).buffer;
+    return { taskId, squishId, workspaceIndex, taskType, output: tileTransform };
+  } catch (error) {
+    return { taskId, squishId, workspaceIndex, taskType, output: error };
+  }
 }
 
 // src/worker/worker.ts
@@ -777,34 +772,15 @@ self.onmessage = async (event) => {
   switch (event.data.taskType) {
     case 0 /* CreateResizeMetadata */: {
       const taskMessage = event.data;
-      try {
-        const taskResult = await onTask1Message(taskMessage);
-        const tiles = taskResult.output.flatMap((resizeMetadata) => resizeMetadata.tileTransforms.map((t) => t.tile));
-        return self.postMessage(taskResult, tiles);
-      } catch (error) {
-        return self.postMessage({
-          taskId: taskMessage.taskId,
-          squishId: taskMessage.squishId,
-          taskType: taskMessage.taskType,
-          error
-        });
-      }
+      const taskResult = await onTask1Message(taskMessage);
+      const tiles = taskResult.output instanceof Error ? [] : taskResult.output.flatMap((m) => m.tileTransforms.map((t) => t.tile));
+      return self.postMessage(taskResult, tiles);
     }
     case 1 /* TransformTile */: {
       const taskMessage = event.data;
-      try {
-        const taskResult = onTask2Message(taskMessage);
-        const tile = taskResult.output.tileTransform.tile;
-        return self.postMessage(taskResult, [tile]);
-      } catch (error) {
-        return self.postMessage({
-          taskId: taskMessage.taskId,
-          squishId: taskMessage.squishId,
-          workspaceIndex: taskMessage.workspaceIndex,
-          taskType: taskMessage.taskType,
-          error
-        });
-      }
+      const taskResult = onTask2Message(taskMessage);
+      const tiles = taskResult.output instanceof Error ? [] : [taskResult.output.tile];
+      return self.postMessage(taskResult, tiles);
     }
   }
 };
@@ -1403,27 +1379,22 @@ function transformTile(tileTransform) {
 async function onTask1Message(taskMessage) {
   const { taskId, squishId, taskType, data } = taskMessage;
   const { image, dimensionLimits, tileOptions } = data;
-  const output = await createResizeMetadata({ image, dimensionLimits, tileOptions });
-  const taskResult = {
-    taskId,
-    squishId,
-    taskType,
-    output
-  };
-  return taskResult;
+  try {
+    const output = await createResizeMetadata({ image, dimensionLimits, tileOptions });
+    return { taskId, squishId, taskType, output };
+  } catch (error) {
+    return { taskId, squishId, taskType, output: error };
+  }
 }
 function onTask2Message(taskMessage) {
   const { taskId, squishId, workspaceIndex, taskType, data } = taskMessage;
   const { tileTransform } = data;
-  tileTransform.tile = transformTile(tileTransform).buffer;
-  const taskResult = {
-    taskId,
-    squishId,
-    workspaceIndex,
-    taskType,
-    output: { tileTransform }
-  };
-  return taskResult;
+  try {
+    tileTransform.tile = transformTile(tileTransform).buffer;
+    return { taskId, squishId, workspaceIndex, taskType, output: tileTransform };
+  } catch (error) {
+    return { taskId, squishId, workspaceIndex, taskType, output: error };
+  }
 }
 
 // src/main/task-queue.ts
@@ -1522,9 +1493,9 @@ class TaskQueue {
     }
   }
   #onTask1Complete(squishContext, taskResult) {
-    const { squishId, output, error } = taskResult;
-    if (error)
-      return squishContext.workspaceHandlers.forEach((h) => h.reject(error));
+    const { squishId, output } = taskResult;
+    if (output instanceof Error)
+      return squishContext.workspaceHandlers.forEach((h) => h.reject(output));
     for (const [workspaceIndex, resizeMetadata] of output.entries()) {
       const toWidth = resizeMetadata.stages[0].toWidth;
       const toHeight = resizeMetadata.stages[0].toHeight;
@@ -1545,7 +1516,7 @@ class TaskQueue {
     }
   }
   #onTask2Complete(squishContext, taskResult) {
-    const { squishId, workspaceIndex, output, error } = taskResult;
+    const { squishId, workspaceIndex, output } = taskResult;
     if (!squishContext.workspaces.has(workspaceIndex))
       return;
     const workspace = squishContext.workspaces.get(workspaceIndex);
@@ -1554,12 +1525,12 @@ class TaskQueue {
     const workspaceHandler = squishContext.workspaceHandlers.get(workspaceIndex);
     if (!workspaceHandler)
       throw new Error("Picsquish error: workspaceHandler not found");
-    if (error) {
+    if (output instanceof Error) {
       squishContext.workspaces.delete(workspaceIndex);
       this.#priority2TaskQueue = this.#priority2TaskQueue.filter((t) => !(t.squishId === squishId && t.workspaceIndex === workspaceIndex));
-      return workspaceHandler.reject(error);
+      return workspaceHandler.reject(output);
     }
-    placeTile(workspace.to, workspace.toWidth, output.tileTransform);
+    placeTile(workspace.to, workspace.toWidth, output);
     --workspace.remainingTileCount;
     if (workspace.remainingTileCount)
       return;

@@ -124,7 +124,7 @@ imageUploadPicsquish.addEventListener('change', async (event) => {
   Array.from(event.target.files).forEach(async file => {
     // const imageBitmap = await createImageBitmap(file)
 
-    const all = (file) => squish(file, [inputs.maxDimension], {
+    const all = (file) => squish(file, [400, inputs.maxDimension, 800], {
       tileSize: inputs.tileSize,
       useMainThread: inputs.useMainThread,
       maxWorkerPoolSize: inputs.poolSize,

@@ -103,16 +103,13 @@ export type TaskResult = {
   taskId: TaskId
   squishId: SquishId
   taskType: TaskType
-  error?: Error
 }
 
 export type TaskResult1 = TaskResult & {
-  output: ResizeMetadata[]
+  output: Error | ResizeMetadata[]
 }
 
 export type TaskResult2 = TaskResult & {
   workspaceIndex: WorkspaceIndex
-  output: {
-    tileTransform: TileTransform
-  }
+  output: Error | TileTransform
 }

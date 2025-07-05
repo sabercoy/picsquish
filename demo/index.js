@@ -122,9 +122,33 @@ imageUploadPicsquish.addEventListener('change', async (event) => {
   start = Date.now()
 
   Array.from(event.target.files).forEach(async file => {
-    // const imageBitmap = await createImageBitmap(file)
+    // const all = (file) => squish(file, [400, inputs.maxDimension, 800], {
+    //   tileSize: inputs.tileSize,
+    //   useMainThread: inputs.useMainThread,
+    //   maxWorkerPoolSize: inputs.poolSize,
+    //   maxWorkerIdleTime: inputs.poolIdle,
+    //   filter: inputs.selectedFilter.value,
+    //   unsharpAmount: inputs.unsharpAmount,
+    //   unsharpRadius: inputs.unsharpRadius,
+    //   unsharpThreshold: inputs.unsharpThreshold,
+    // })
 
-    const all = (file) => squish(file, [400, inputs.maxDimension, 800], {
+    // all(file).forEach(p => {
+    //   p.then(result => result.toImageBitmap()).then(imageBitmap => {
+    //     const canvas = document.createElement('canvas')
+    //     document.body.appendChild(canvas)
+    //     const context = canvas.getContext('2d')
+
+    //     canvas.width = imageBitmap.width
+    //     canvas.height = imageBitmap.height
+
+    //     context.drawImage(imageBitmap, 0, 0)
+
+    //     addCanvasToGrid(canvas, imageGrid3)
+    //   }).catch(error => console.log(error))
+    // })
+
+    const single = (file) => squish(file, inputs.maxDimension, {
       tileSize: inputs.tileSize,
       useMainThread: inputs.useMainThread,
       maxWorkerPoolSize: inputs.poolSize,
@@ -135,19 +159,17 @@ imageUploadPicsquish.addEventListener('change', async (event) => {
       unsharpThreshold: inputs.unsharpThreshold,
     })
 
-    all(file).forEach(p => {
-      p.then(result => result.toImageBitmap()).then(imageBitmap => {
-        const canvas = document.createElement('canvas')
-        document.body.appendChild(canvas)
-        const context = canvas.getContext('2d')
+    single(file).then(result => result.toImageBitmap()).then(imageBitmap => {
+      const canvas = document.createElement('canvas')
+      document.body.appendChild(canvas)
+      const context = canvas.getContext('2d')
 
-        canvas.width = imageBitmap.width
-        canvas.height = imageBitmap.height
+      canvas.width = imageBitmap.width
+      canvas.height = imageBitmap.height
 
-        context.drawImage(imageBitmap, 0, 0)
+      context.drawImage(imageBitmap, 0, 0)
 
-        addCanvasToGrid(canvas, imageGrid3)
-      }).catch(error => console.log(error))
-    })
+      addCanvasToGrid(canvas, imageGrid3)
+    }).catch(error => console.log(error))
   })
 })

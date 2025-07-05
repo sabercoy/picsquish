@@ -1,3 +1,13 @@
+export declare class SquishResult {
+    raw: Uint8ClampedArray<ArrayBuffer>;
+    width: number;
+    height: number;
+    constructor(raw: Uint8ClampedArray<ArrayBuffer>, width: number, height: number);
+    toImageData(): ImageData;
+    toImageBitmap(): Promise<ImageBitmap>;
+    toCanvas(): HTMLCanvasElement;
+    toBlob(type?: string): Promise<Blob>;
+}
 export declare const BYTES_PER_PIXEL = 4;
 export type DimensionLimit = number;
 export type InitialImage = Blob | ImageBitmap;

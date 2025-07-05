@@ -59,7 +59,10 @@ class WorkerPool {
   }
 
   setTimeout() {
+    // if there is already a timeout then let it play out
     if (this.#timeoutId !== null) return undefined
+    // if there is no workers then no need for a timeout
+    if (this.#workerToTaskId.size === 0) return undefined
 
     this.#timeoutId = setTimeout(() => {
       for (const worker of this.#workerToTaskId.keys()) {

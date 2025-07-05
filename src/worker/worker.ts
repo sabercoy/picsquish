@@ -1,55 +1,14 @@
-import {
-  TaskType,
-  TaskMessage,
-  TaskMessage1,
-  TaskMessage2,
-  TaskResult1,
-  TaskResult2,
-} from '../common'
-import { createResizeMetadata } from './create-resize-metadata'
-import { transformTile } from './transform-tile'
-
-async function onTask1Message(taskMessage: TaskMessage1) {
-  const { taskId, squishId, taskType, data } = taskMessage
-  const { image, dimensionLimits, tileOptions } = data
-  
-  const output = await createResizeMetadata({ image, dimensionLimits, tileOptions })
-  
-  const taskResult: TaskResult1 = {
-    taskId,
-    squishId,
-    taskType,
-    output,
-  }
-
-  const tiles = output.flatMap(resizeMetadata => resizeMetadata.tileTransforms.map(tileTransform => tileTransform.tile))
-
-  self.postMessage(taskResult, tiles)
-}
-
-function onTask2Message(taskMessage: TaskMessage2) {
-  const { taskId, squishId, workspaceIndex, taskType, data } = taskMessage
-  const { tileTransform } = data
-
-  tileTransform.tile = transformTile(tileTransform).buffer
-
-  const taskResult: TaskResult2 = {
-    taskId,
-    squishId,
-    workspaceIndex,
-    taskType,
-    output: { tileTransform },
-  }
-
-  self.postMessage(taskResult, [tileTransform.tile])
-}
+import { TaskType, TaskMessage, TaskMessage1, TaskMessage2 } from '../common'
+import { onTask1Message, onTask2Message } from './on-task-message'
 
 self.onmessage = async (event: MessageEvent<TaskMessage>) => {
   switch (event.data.taskType) {
     case TaskType.CreateResizeMetadata: {
       const taskMessage = event.data as TaskMessage1
       try {
-        return await onTask1Message(taskMessage)
+        const taskResult = await onTask1Message(taskMessage)
+        const tiles = taskResult.output.flatMap(resizeMetadata => resizeMetadata.tileTransforms.map(t => t.tile))
+        return self.postMessage(taskResult, tiles)
       } catch (error) {
         return self.postMessage({
           taskId: taskMessage.taskId,
@@ -62,7 +21,9 @@ self.onmessage = async (event: MessageEvent<TaskMessage>) => {
     case TaskType.TransformTile: {
       const taskMessage = event.data as TaskMessage2
       try {
-        return onTask2Message(taskMessage)
+        const taskResult = onTask2Message(taskMessage)
+        const tile = taskResult.output.tileTransform.tile
+        return self.postMessage(taskResult, [tile])
       } catch (error) {
         return self.postMessage({
           taskId: taskMessage.taskId,

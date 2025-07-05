@@ -1,5 +1,6 @@
 import { DimensionLimit, InitialImage, TileOptions } from '../common';
 type Options = {
+    useMainThread?: boolean;
     maxWorkerPoolSize?: number;
     maxWorkerIdleTime?: number;
     tileSize?: TileOptions['initialSize'];

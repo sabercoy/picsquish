@@ -2,6 +2,7 @@ import { DimensionLimit, InitialImage, TileOptions } from '../common'
 import { taskQueue } from './task-queue'
 
 type Options = {
+  useMainThread?: boolean
   maxWorkerPoolSize?: number
   maxWorkerIdleTime?: number
   tileSize?: TileOptions['initialSize']
@@ -17,6 +18,7 @@ export function squish(image: InitialImage, dimensionLimits: DimensionLimit[], o
   const unsharpAmount = options.unsharpAmount || 0
   const unsharpRadius = options.unsharpRadius || 0
   const unsharpThreshold = options.unsharpThreshold || 0
+  const useMainThread = !!options.useMainThread
   const hardwareConcurrency = typeof navigator === 'undefined' ? 1 : navigator.hardwareConcurrency
   const maxWorkerPoolSize = options.maxWorkerPoolSize || Math.min(hardwareConcurrency, 4)
   const maxWorkerPoolIdleTime = options.maxWorkerIdleTime || 2000
@@ -37,5 +39,6 @@ export function squish(image: InitialImage, dimensionLimits: DimensionLimit[], o
     { image, dimensionLimits, tileOptions },
     maxWorkerPoolSize,
     maxWorkerPoolIdleTime,
+    useMainThread,
   )
 }

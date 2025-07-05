@@ -66,13 +66,14 @@ const resizeWithCanvas = async (blob, maxDimension) => {
 const getInputs = () => {
   const maxDimension = parseInt(document.getElementById('max-dimension').textContent)
   const tileSize = parseInt(document.getElementById('tile-size').textContent)
+  const useMainThread = document.getElementById('use-main-thread').checked
   const poolSize = parseInt(document.getElementById('pool-size').textContent)
   const poolIdle = parseInt(document.getElementById('pool-idle').textContent)
   const selectedFilter = document.querySelector('input[name="filter"]:checked').value
   const unsharpAmount = parseInt(document.getElementById('unsharp-amount').textContent)
   const unsharpRadius = parseFloat(document.getElementById('unsharp-radius').textContent)
   const unsharpThreshold = parseInt(document.getElementById('unsharp-threshold').textContent)
-  return { maxDimension, tileSize, poolSize, poolIdle, selectedFilter, unsharpAmount, unsharpRadius, unsharpThreshold }
+  return { maxDimension, tileSize, useMainThread, poolSize, poolIdle, selectedFilter, unsharpAmount, unsharpRadius, unsharpThreshold }
 }
 
 imageUploadCanvas.addEventListener('change', async (event) => {
@@ -95,7 +96,7 @@ imageUploadPica.addEventListener('change', async (event) => {
   start = Date.now()
 
   const p = pica({
-    features: ['js', 'ww'],
+    features: inputs.useMainThread ? ['js'] : ['js', 'ww'],
     tile: inputs.tileSize,
     concurrency: inputs.poolSize,
     idle: inputs.poolIdle,
@@ -125,6 +126,7 @@ imageUploadPicsquish.addEventListener('change', async (event) => {
 
     const all = (file) => squish(file, [inputs.maxDimension], {
       tileSize: inputs.tileSize,
+      useMainThread: inputs.useMainThread,
       maxWorkerPoolSize: inputs.poolSize,
       maxWorkerIdleTime: inputs.poolIdle,
       filter: inputs.selectedFilter.value,

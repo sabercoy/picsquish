@@ -16,6 +16,7 @@ import {
 } from '../common'
 import { placeTile } from './place-tile'
 import { workerPool } from './worker-pool'
+import { onTask1Message, onTask2Message } from '../worker/on-task-message'
 
 type Workspace = {
   to: Uint8ClampedArray<ArrayBuffer>
@@ -37,6 +38,7 @@ type SquishContext = {
   tileOptions: TileOptions
   workspaces: WorkspaceMap
   workspaceHandlers: WorkspaceHandlerMap
+  useMainThread: boolean
 }
 
 const createId = (() => {
@@ -93,7 +95,7 @@ class TaskQueue {
     this.#priority2TaskQueue = []
   }
 
-  #assignPriority1Task(worker: Worker, task: PendingTask1) {
+  #processPriority1Task(task: PendingTask1, worker?: Worker) {
     const taskId = createId()
 
     const taskMessage: TaskMessage1 = {
@@ -103,11 +105,13 @@ class TaskQueue {
       data: task.data,
     }
 
+    if (!worker) return onTask1Message(taskMessage).then(r => this.#onTaskComplete(r))
+
     const transfer = task.data.image instanceof ImageBitmap ? [task.data.image] : []
     workerPool.assignTask(worker, taskId, taskMessage, transfer)
   }
 
-  #assignPriority2Task(worker: Worker, task: PendingTask2) {
+  #processPriority2Task(task: PendingTask2, worker?: Worker) {
     const taskId = createId()
 
     const taskMessage: TaskMessage2 = {
@@ -118,23 +122,28 @@ class TaskQueue {
       data: task.data,
     }
 
+    if (!worker) return this.#onTaskComplete(onTask2Message(taskMessage))
+
     workerPool.assignTask(worker, taskId, taskMessage, [task.data.tileTransform.tile])
   }
 
-  #attemptAssignTask(worker: Worker) {
+  #processTask(worker?: Worker) {
     const priority1Task = this.#priority1TaskQueue.shift()
-    if (priority1Task) return this.#assignPriority1Task(worker, priority1Task)
+    if (priority1Task) return this.#processPriority1Task(priority1Task, worker)
     const priority2Task = this.#priority2TaskQueue.shift()
-    if (priority2Task) return this.#assignPriority2Task(worker, priority2Task)
+    if (priority2Task) return this.#processPriority2Task(priority2Task, worker)
   }
 
-  #processQueue() {
+  #processQueue(useMainThread?: boolean) {
     const noTasks = this.#priority1TaskQueue.length === 0 && this.#priority2TaskQueue.length === 0
     if (noTasks) return workerPool.setTimeout()
+    
+    if (useMainThread) return this.#processTask()    
 
     const availableWorkers = workerPool.getAvailableWorkers()
+
     for (const availableWorker of availableWorkers) {
-      this.#attemptAssignTask(availableWorker)
+      this.#processTask(availableWorker)
     }
   }
 
@@ -216,29 +225,34 @@ class TaskQueue {
     })
   }
   
-  #onTaskComplete(event: MessageEvent<TaskResult>) {
-    const squishContext = this.#squishContexts.get(event.data.squishId)
+  #onTaskComplete(taskResult: TaskResult) {
+    const squishContext = this.#squishContexts.get(taskResult.squishId)
     if (!squishContext) throw new Error('Picsquish error: squishContext not found')
 
-    switch (event.data.taskType) {
+    switch (taskResult.taskType) {
       case TaskType.CreateResizeMetadata:
-        this.#onTask1Complete(squishContext, event.data as TaskResult1)
+        this.#onTask1Complete(squishContext, taskResult as TaskResult1)
         break
       case TaskType.TransformTile:
-        this.#onTask2Complete(squishContext, event.data as TaskResult2)
+        this.#onTask2Complete(squishContext, taskResult as TaskResult2)
         break
     }
 
     // if all workspaces are cleared after being resolved or rejected then remove the squishContext
-    if (!squishContext.workspaces.size) this.#squishContexts.delete(event.data.squishId)
+    if (!squishContext.workspaces.size) this.#squishContexts.delete(taskResult.squishId)
 
-    workerPool.removeTask(event.data.taskId)
-    this.#processQueue()
+    workerPool.removeTask(taskResult.taskId)
+    this.#processQueue(squishContext.useMainThread)
   }
 
-  add(taskData: TaskData1, maxWorkerPoolSize: number, maxWorkerPoolIdleTime: number) {
-    workerPool.prepare(
-      (event: MessageEvent<TaskResult>) => this.#onTaskComplete(event),
+  add(
+    taskData: TaskData1,
+    maxWorkerPoolSize: number,
+    maxWorkerPoolIdleTime: number,
+    useMainThread: boolean,
+  ) {
+    if (!useMainThread) workerPool.prepare(
+      (event: MessageEvent<TaskResult>) => this.#onTaskComplete(event.data),
       maxWorkerPoolSize,
       maxWorkerPoolIdleTime,
     )
@@ -258,11 +272,12 @@ class TaskQueue {
       tileOptions: taskData.tileOptions,
       workspaces: new Map(),
       workspaceHandlers,
+      useMainThread,
     })
 
     this.#priority1TaskQueue.push({ squishId, data: taskData })
 
-    queueMicrotask(() => this.#processQueue())
+    queueMicrotask(() => this.#processQueue(useMainThread))
 
     return squishPromises
   }

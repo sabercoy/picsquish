@@ -38,8 +38,6 @@ export class SquishResult {
 
 export const BYTES_PER_PIXEL = 4 // channels: RGBA
 
-export type DimensionLimit = number
-
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013'
 
 export type TileOptions = {
@@ -105,7 +103,7 @@ export type ResizedImage = {
 
 export type TaskData1 = {
   image: Blob | ResizedImage
-  dimensionLimits: DimensionLimit[]
+  dimensionLimits: number[]
   tileOptions: TileOptions
 }
 

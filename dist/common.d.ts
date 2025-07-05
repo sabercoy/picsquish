@@ -9,7 +9,6 @@ export declare class SquishResult {
     toBlob(type?: string): Promise<Blob>;
 }
 export declare const BYTES_PER_PIXEL = 4;
-export type DimensionLimit = number;
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013';
 export type TileOptions = {
     initialSize: number;
@@ -67,7 +66,7 @@ export type ResizedImage = {
 };
 export type TaskData1 = {
     image: Blob | ResizedImage;
-    dimensionLimits: DimensionLimit[];
+    dimensionLimits: number[];
     tileOptions: TileOptions;
 };
 type TaskData2 = {

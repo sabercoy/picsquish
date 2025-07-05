@@ -643,7 +643,7 @@ function transformTile(tileTransform) {
 }
 
 // src/worker/worker.ts
-var onTask1Message = async (taskMessage) => {
+async function onTask1Message(taskMessage) {
   const { taskId, squishId, taskType, data } = taskMessage;
   const { image, dimensionLimits, tileOptions } = data;
   const output = await createResizeMetadata({ image, dimensionLimits, tileOptions });
@@ -655,7 +655,7 @@ var onTask1Message = async (taskMessage) => {
   };
   const tiles = output.flatMap((resizeMetadata) => resizeMetadata.tileTransforms.map((tileTransform) => tileTransform.tile));
   self.postMessage(taskResult, tiles);
-};
+}
 function onTask2Message(taskMessage) {
   const { taskId, squishId, workspaceIndex, taskType, data } = taskMessage;
   const { tileTransform } = data;

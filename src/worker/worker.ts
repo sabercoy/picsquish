@@ -9,7 +9,7 @@ import {
 import { createResizeMetadata } from './create-resize-metadata'
 import { transformTile } from './transform-tile'
 
-const onTask1Message = async (taskMessage: TaskMessage1) => {
+async function onTask1Message(taskMessage: TaskMessage1) {
   const { taskId, squishId, taskType, data } = taskMessage
   const { image, dimensionLimits, tileOptions } = data
   

@@ -35,7 +35,6 @@ const squishResult = await squish(image, maxDimension, options)
 - __image__ - can be `Blob` or `ImageBitmap`
 - __maxDimension__ - max dimension that the resized image will have
 - __options__ - options are not required and defaults are provided for those not specified
-  - __useMainThread__ - if (for some reason) you want to resize on the main thread
   - __maxWorkerPoolSize__ - the max amount of web workers to allocate for resizing
   - __maxWorkerIdleTime__ - the max amount of idle time before web workers terminate
   - __tileSize__ - the target width and height of each tile for processing

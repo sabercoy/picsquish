@@ -1,41 +1,6 @@
 // src/common.ts
 var BYTES_PER_PIXEL = 4;
 
-class SquishResult {
-  raw;
-  width;
-  height;
-  constructor(raw, width, height) {
-    this.raw = raw;
-    this.width = width;
-    this.height = height;
-  }
-  toImageData() {
-    return new ImageData(this.raw, this.width, this.height);
-  }
-  toImageBitmap() {
-    return createImageBitmap(this.toImageData());
-  }
-  toCanvas() {
-    const canvas = document.createElement("canvas");
-    canvas.width = this.width;
-    canvas.height = this.height;
-    const context = canvas.getContext("2d");
-    if (!context)
-      throw new Error("Picsquish error: canvas 2D context not supported");
-    context.putImageData(this.toImageData(), 0, 0);
-    return canvas;
-  }
-  toBlob(type = "image/png") {
-    const canvas = new OffscreenCanvas(this.width, this.height);
-    const context = canvas.getContext("2d");
-    if (!context)
-      throw new Error("Picsquish error: canvas 2D context not supported");
-    context.putImageData(this.toImageData(), 0, 0);
-    return canvas.convertToBlob({ type });
-  }
-}
-
 // src/main/place-tile.ts
 function placeTile(to, toWidth, tileTransform) {
   const tile = new Uint8ClampedArray(tileTransform.tile);
@@ -807,6 +772,41 @@ var createId = (() => {
   return () => ++count;
 })();
 
+class SquishResult {
+  raw;
+  width;
+  height;
+  constructor(raw, width, height) {
+    this.raw = raw;
+    this.width = width;
+    this.height = height;
+  }
+  toImageData() {
+    return new ImageData(this.raw, this.width, this.height);
+  }
+  toImageBitmap() {
+    return createImageBitmap(this.toImageData());
+  }
+  toCanvas() {
+    const canvas = document.createElement("canvas");
+    canvas.width = this.width;
+    canvas.height = this.height;
+    const context = canvas.getContext("2d");
+    if (!context)
+      throw new Error("Picsquish error: canvas 2D context not supported");
+    context.putImageData(this.toImageData(), 0, 0);
+    return canvas;
+  }
+  toBlob(type = "image/png") {
+    const canvas = new OffscreenCanvas(this.width, this.height);
+    const context = canvas.getContext("2d");
+    if (!context)
+      throw new Error("Picsquish error: canvas 2D context not supported");
+    context.putImageData(this.toImageData(), 0, 0);
+    return canvas.convertToBlob({ type });
+  }
+}
+
 class TaskQueue {
   #squishContexts;
   #priority1TaskQueue;
@@ -963,7 +963,6 @@ function squish(image, dimensionLimits, options = {}) {
   const unsharpAmount = options.unsharpAmount || 0;
   const unsharpRadius = options.unsharpRadius || 0;
   const unsharpThreshold = options.unsharpThreshold || 0;
-  const useMainThread = options.useMainThread;
   const hardwareConcurrency = typeof navigator === "undefined" ? 1 : navigator.hardwareConcurrency;
   const maxWorkerPoolSize = options.maxWorkerPoolSize || Math.min(hardwareConcurrency, 4);
   const maxWorkerPoolIdleTime = options.maxWorkerIdleTime || 2000;

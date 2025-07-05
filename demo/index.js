@@ -66,14 +66,13 @@ const resizeWithCanvas = async (blob, maxDimension) => {
 const getInputs = () => {
   const maxDimension = parseInt(document.getElementById('max-dimension').textContent)
   const tileSize = parseInt(document.getElementById('tile-size').textContent)
-  const useMainThread = document.getElementById('use-main-thread').checked
   const poolSize = parseInt(document.getElementById('pool-size').textContent)
   const poolIdle = parseInt(document.getElementById('pool-idle').textContent)
   const selectedFilter = document.querySelector('input[name="filter"]:checked').value
   const unsharpAmount = parseInt(document.getElementById('unsharp-amount').textContent)
   const unsharpRadius = parseFloat(document.getElementById('unsharp-radius').textContent)
   const unsharpThreshold = parseInt(document.getElementById('unsharp-threshold').textContent)
-  return { maxDimension, tileSize, useMainThread, poolSize, poolIdle, selectedFilter, unsharpAmount, unsharpRadius, unsharpThreshold }
+  return { maxDimension, tileSize, poolSize, poolIdle, selectedFilter, unsharpAmount, unsharpRadius, unsharpThreshold }
 }
 
 imageUploadCanvas.addEventListener('change', async (event) => {
@@ -96,7 +95,7 @@ imageUploadPica.addEventListener('change', async (event) => {
   start = Date.now()
 
   const p = pica({
-    features: inputs.useMainThread ? ['js'] : ['js', 'ww'],
+    features: ['js', 'ww'],
     tile: inputs.tileSize,
     concurrency: inputs.poolSize,
     idle: inputs.poolIdle,
@@ -108,8 +107,6 @@ imageUploadPica.addEventListener('change', async (event) => {
     unsharpRadius: inputs.unsharpRadius,
     unsharpThreshold: inputs.unsharpThreshold,
   })
-
-  inputs.maxDimension = 20
 
   Array.from(event.target.files).forEach(file => createImageBitmap(file).then(imageBitmap => {
     return resize(imageBitmap, createResizedCanvas(imageBitmap, inputs.maxDimension))
@@ -123,72 +120,11 @@ imageUploadPicsquish.addEventListener('change', async (event) => {
   remainingCount = event.target.files.length
   start = Date.now()
 
-  // const resize = (file) => squish(file, inputs.maxDimension, {
-  //   tileSize: inputs.tileSize,
-  //   useMainThread: inputs.useMainThread,
-  //   maxWorkerPoolSize: inputs.poolSize,
-  //   maxWorkerIdleTime: inputs.poolIdle,
-  //   filter: inputs.selectedFilter.value,
-  //   unsharpAmount: inputs.unsharpAmount,
-  //   unsharpRadius: inputs.unsharpRadius,
-  //   unsharpThreshold: inputs.unsharpThreshold,
-  // })
-
-  const resize1 = (b) => squish(b, [600], {
-    tileSize: inputs.tileSize,
-    useMainThread: inputs.useMainThread,
-    maxWorkerPoolSize: inputs.poolSize,
-    maxWorkerIdleTime: inputs.poolIdle,
-    filter: inputs.selectedFilter.value,
-    unsharpAmount: inputs.unsharpAmount,
-    unsharpRadius: inputs.unsharpRadius,
-    unsharpThreshold: inputs.unsharpThreshold,
-  })
-
-  const resize2 = (b) => squish(b, [700], {
-    tileSize: inputs.tileSize,
-    useMainThread: inputs.useMainThread,
-    maxWorkerPoolSize: inputs.poolSize,
-    maxWorkerIdleTime: inputs.poolIdle,
-    filter: inputs.selectedFilter.value,
-    unsharpAmount: inputs.unsharpAmount,
-    unsharpRadius: inputs.unsharpRadius,
-    unsharpThreshold: inputs.unsharpThreshold,
-  })
-
-  const resize3 = (b) => squish(b, [800], {
-    tileSize: inputs.tileSize,
-    useMainThread: inputs.useMainThread,
-    maxWorkerPoolSize: inputs.poolSize,
-    maxWorkerIdleTime: inputs.poolIdle,
-    filter: inputs.selectedFilter.value,
-    unsharpAmount: inputs.unsharpAmount,
-    unsharpRadius: inputs.unsharpRadius,
-    unsharpThreshold: inputs.unsharpThreshold,
-  })
-
-  // Array.from(event.target.files).forEach(file => resize(file).then(result => result.toImageBitmap()).then(imageBitmap => {
-  //   const canvas = document.createElement('canvas')
-  //   document.body.appendChild(canvas)
-  //   const context = canvas.getContext('2d')
-
-  //   canvas.width = imageBitmap.width
-  //   canvas.height = imageBitmap.height
-
-  //   context.drawImage(imageBitmap, 0, 0)
-
-  //   addCanvasToGrid(canvas, imageGrid3)
-  // }).catch(error => console.log(error)))
-
-
   Array.from(event.target.files).forEach(async file => {
     // const imageBitmap = await createImageBitmap(file)
 
-    // console.log(imageBitmap.width)
-
-    const all = (file) => squish(file, [20, 600, 800], {
+    const all = (file) => squish(file, [inputs.maxDimension], {
       tileSize: inputs.tileSize,
-      useMainThread: inputs.useMainThread,
       maxWorkerPoolSize: inputs.poolSize,
       maxWorkerIdleTime: inputs.poolIdle,
       filter: inputs.selectedFilter.value,
@@ -211,37 +147,5 @@ imageUploadPicsquish.addEventListener('change', async (event) => {
         addCanvasToGrid(canvas, imageGrid3)
       }).catch(error => console.log(error))
     })
-
-    //await new Promise(resolve => setTimeout(resolve, 4000))
-
-    //console.log(imageBitmap.width)
-
-
-
-    // resize2(imageBitmap).then(result => result.toImageBitmap()).then(imageBitmap => {
-    //   const canvas = document.createElement('canvas')
-    //   document.body.appendChild(canvas)
-    //   const context = canvas.getContext('2d')
-
-    //   canvas.width = imageBitmap.width
-    //   canvas.height = imageBitmap.height
-
-    //   context.drawImage(imageBitmap, 0, 0)
-
-    //   addCanvasToGrid(canvas, imageGrid3)
-    // }).catch(error => console.log(error))
-
-    // resize3(imageBitmap).then(result => result.toImageBitmap()).then(imageBitmap => {
-    //   const canvas = document.createElement('canvas')
-    //   document.body.appendChild(canvas)
-    //   const context = canvas.getContext('2d')
-
-    //   canvas.width = imageBitmap.width
-    //   canvas.height = imageBitmap.height
-
-    //   context.drawImage(imageBitmap, 0, 0)
-
-    //   addCanvasToGrid(canvas, imageGrid3)
-    // }).catch(error => console.log(error))
   })
 })

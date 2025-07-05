@@ -1,15 +1,5 @@
 export declare const BYTES_PER_PIXEL = 4;
 export type DimensionLimit = number;
-export declare class SquishResult {
-    raw: Uint8ClampedArray<ArrayBuffer>;
-    width: number;
-    height: number;
-    constructor(raw: Uint8ClampedArray<ArrayBuffer>, width: number, height: number);
-    toImageData(): ImageData;
-    toImageBitmap(): Promise<ImageBitmap>;
-    toCanvas(): HTMLCanvasElement;
-    toBlob(type?: string): Promise<Blob>;
-}
 export type InitialImage = Blob | ImageBitmap;
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013';
 export type TileOptions = {
@@ -53,12 +43,6 @@ export type ResizeMetadata = {
     tileTransforms: TileTransform[];
     stages: ResizeStage[];
 };
-export type ResizedImage = {
-    from: Uint8ClampedArray;
-    fromWidth: number;
-    fromHeight: number;
-    stages: ResizeStage[];
-};
 export declare enum TaskType {
     CreateResizeMetadata = 0,
     TransformTile = 1
@@ -66,6 +50,12 @@ export declare enum TaskType {
 export type TaskId = number;
 export type SquishId = number;
 export type WorkspaceIndex = number;
+export type ResizedImage = {
+    from: Uint8ClampedArray;
+    fromWidth: number;
+    fromHeight: number;
+    stages: ResizeStage[];
+};
 export type TaskData1 = {
     image: InitialImage | ResizedImage;
     dimensionLimits: DimensionLimit[];

@@ -2,44 +2,6 @@ export const BYTES_PER_PIXEL = 4 // channels: RGBA
 
 export type DimensionLimit = number
 
-export class SquishResult {
-  raw: Uint8ClampedArray<ArrayBuffer>
-  width: number
-  height: number
-
-  constructor(raw: Uint8ClampedArray<ArrayBuffer>, width: number, height: number) {
-    this.raw = raw
-    this.width = width
-    this.height = height
-  }
-
-  toImageData() {
-    return new ImageData(this.raw, this.width, this.height)
-  }
-
-  toImageBitmap() {
-    return createImageBitmap(this.toImageData())
-  }
-
-  toCanvas() {
-    const canvas = document.createElement('canvas')
-    canvas.width = this.width
-    canvas.height = this.height
-    const context = canvas.getContext('2d')
-    if (!context) throw new Error('Picsquish error: canvas 2D context not supported')
-    context.putImageData(this.toImageData(), 0, 0)
-    return canvas
-  }
-
-  toBlob(type: string = 'image/png') {
-    const canvas = new OffscreenCanvas(this.width, this.height)
-    const context = canvas.getContext('2d')
-    if (!context) throw new Error('Picsquish error: canvas 2D context not supported')
-    context.putImageData(this.toImageData(), 0, 0)
-    return canvas.convertToBlob({ type })
-  }
-}
-
 export type InitialImage = Blob | ImageBitmap
 
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013'
@@ -89,13 +51,6 @@ export type ResizeMetadata = {
   stages: ResizeStage[]
 }
 
-export type ResizedImage = {
-  from: Uint8ClampedArray
-  fromWidth: number
-  fromHeight: number
-  stages: ResizeStage[]
-}
-
 export enum TaskType {
   CreateResizeMetadata,
   TransformTile,
@@ -104,6 +59,13 @@ export enum TaskType {
 export type TaskId = number
 export type SquishId = number
 export type WorkspaceIndex = number
+
+export type ResizedImage = {
+  from: Uint8ClampedArray
+  fromWidth: number
+  fromHeight: number
+  stages: ResizeStage[]
+}
 
 export type TaskData1 = {
   image: InitialImage | ResizedImage

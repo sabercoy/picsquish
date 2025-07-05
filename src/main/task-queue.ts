@@ -1,6 +1,5 @@
 import {
   BYTES_PER_PIXEL,
-  ResizeStage,
   TaskType,
   TaskData1,
   TaskResult,
@@ -10,10 +9,10 @@ import {
   PendingTask2,
   TaskMessage1,
   TaskMessage2,
-  SquishResult,
   TileOptions,
   SquishId,
   WorkspaceIndex,
+  ResizeStage,
 } from '../common'
 import { placeTile } from './place-tile'
 import { workerPool } from './worker-pool'
@@ -31,16 +30,57 @@ type WorkspaceHandler = {
   reject: (error: Error) => void
 }
 
+type WorkspaceMap = Map<WorkspaceIndex, Workspace>
+type WorkspaceHandlerMap = Map<WorkspaceIndex, WorkspaceHandler>
+
 type SquishContext = {
   tileOptions: TileOptions
-  workspaces: Map<WorkspaceIndex, Workspace>
-  workspaceHandlers: Map<WorkspaceIndex, WorkspaceHandler>
+  workspaces: WorkspaceMap
+  workspaceHandlers: WorkspaceHandlerMap
 }
 
 const createId = (() => {
   let count = 0
   return () => ++count
 })()
+
+class SquishResult {
+  raw: Uint8ClampedArray<ArrayBuffer>
+  width: number
+  height: number
+
+  constructor(raw: Uint8ClampedArray<ArrayBuffer>, width: number, height: number) {
+    this.raw = raw
+    this.width = width
+    this.height = height
+  }
+
+  toImageData() {
+    return new ImageData(this.raw, this.width, this.height)
+  }
+
+  toImageBitmap() {
+    return createImageBitmap(this.toImageData())
+  }
+
+  toCanvas() {
+    const canvas = document.createElement('canvas')
+    canvas.width = this.width
+    canvas.height = this.height
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Picsquish error: canvas 2D context not supported')
+    context.putImageData(this.toImageData(), 0, 0)
+    return canvas
+  }
+
+  toBlob(type: string = 'image/png') {
+    const canvas = new OffscreenCanvas(this.width, this.height)
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Picsquish error: canvas 2D context not supported')
+    context.putImageData(this.toImageData(), 0, 0)
+    return canvas.convertToBlob({ type })
+  }
+}
 
 class TaskQueue {
   #squishContexts: Map<SquishId, SquishContext>
@@ -204,7 +244,7 @@ class TaskQueue {
     )
 
     const squishPromises: Promise<SquishResult>[] = []
-    const workspaceHandlers: Map<WorkspaceIndex, WorkspaceHandler> = new Map()
+    const workspaceHandlers: WorkspaceHandlerMap = new Map()
 
     for (let workspaceIndex = 0; workspaceIndex < taskData.dimensionLimits.length; workspaceIndex++) {
       squishPromises.push(new Promise<SquishResult>((resolve, reject) => {

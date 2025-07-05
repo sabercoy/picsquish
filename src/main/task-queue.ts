@@ -174,7 +174,6 @@ class TaskQueue {
     }
   }
 
-  // if I reject a resize, how to make sure further tasks in the queue dont execute for it
   #onTask2Complete(squishContext: SquishContext, taskResult: TaskResult2) {
     const { squishId, workspaceIndex, output, error } = taskResult
 

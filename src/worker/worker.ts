@@ -10,30 +10,33 @@ import { createResizeMetadata } from './create-resize-metadata'
 import { transformTile } from './transform-tile'
 
 const onTask1Message = async (taskMessage: TaskMessage1) => {
-  const { taskId, squishId, taskType, image, maxDimension, tileOptions } = taskMessage
+  const { taskId, squishId, taskType, data } = taskMessage
+  const { image, dimensionLimits, tileOptions } = data
   
-  const { tileTransforms, stages } = await createResizeMetadata({ image, maxDimension, tileOptions })
+  const output = await createResizeMetadata({ image, dimensionLimits, tileOptions })
   
   const taskResult: TaskResult1 = {
     taskId,
     squishId,
     taskType,
-    output: { tileTransforms, stages },
+    output,
   }
 
-  const tiles = tileTransforms.map(tileTransform => tileTransform.tile)
+  const tiles = output.flatMap(resizeMetadata => resizeMetadata.tileTransforms.map(tileTransform => tileTransform.tile))
 
   self.postMessage(taskResult, tiles)
 }
 
 function onTask2Message(taskMessage: TaskMessage2) {
-  const { taskId, squishId, taskType, tileTransform } = taskMessage
+  const { taskId, squishId, workspaceIndex, taskType, data } = taskMessage
+  const { tileTransform } = data
 
   tileTransform.tile = transformTile(tileTransform).buffer
 
   const taskResult: TaskResult2 = {
     taskId,
     squishId,
+    workspaceIndex,
     taskType,
     output: { tileTransform },
   }
@@ -42,17 +45,33 @@ function onTask2Message(taskMessage: TaskMessage2) {
 }
 
 self.onmessage = async (event: MessageEvent<TaskMessage>) => {
-  try {
-    switch (event.data.taskType) {
-      case TaskType.CreateResizeMetadata: return onTask1Message(event.data as TaskMessage1)
-      case TaskType.TransformTile: return onTask2Message(event.data as TaskMessage2)
+  switch (event.data.taskType) {
+    case TaskType.CreateResizeMetadata: {
+      const taskMessage = event.data as TaskMessage1
+      try {
+        return await onTask1Message(taskMessage)
+      } catch (error) {
+        return self.postMessage({
+          taskId: taskMessage.taskId,
+          squishId: taskMessage.squishId,
+          taskType: taskMessage.taskType,
+          error: error as Error
+        })
+      }
     }
-  } catch (error) {
-    self.postMessage({
-      taskId: event.data.taskId,
-      squishId: event.data.squishId,
-      taskType: event.data.taskType,
-      error: error as Error
-    })
+    case TaskType.TransformTile: {
+      const taskMessage = event.data as TaskMessage2
+      try {
+        return onTask2Message(taskMessage)
+      } catch (error) {
+        return self.postMessage({
+          taskId: taskMessage.taskId,
+          squishId: taskMessage.squishId,
+          workspaceIndex: taskMessage.workspaceIndex,
+          taskType: taskMessage.taskType,
+          error: error as Error
+        })
+      }
+    }
   }
 }

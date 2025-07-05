@@ -1,64 +1,82 @@
 import { createResizeStages } from './create-resize-stages'
 import { createTileTransforms } from './create-tile-transforms'
-import { InitialImage, ResizedImage, ResizeStage, TileOptions } from '../common'
+import { DimensionLimit, InitialImage, ResizedImage, ResizeStage, TileOptions, TileTransform } from '../common'
 
 type CreateResizeMetadataParams = {
   image: InitialImage | ResizedImage
-  maxDimension: number
+  dimensionLimits: DimensionLimit[]
   tileOptions: TileOptions
 }
 
-export async function createResizeMetadata(params: CreateResizeMetadataParams) {
-  let from: ImageBitmap | Uint8ClampedArray
-  let fromWidth: number
-  let fromHeight: number
-  let stages: ResizeStage[]
-  let toWidth: number
-  let toHeight: number
+type ResizeMetadata = {
+  tileTransforms: TileTransform[]
+  stages: ResizeStage[]
+}
 
-  if (params.image instanceof Blob || params.image instanceof ImageBitmap) {
-    const imageBitmap = params.image instanceof ImageBitmap ? params.image : await createImageBitmap(params.image)
-    from = imageBitmap
-    fromWidth = imageBitmap.width
-    fromHeight = imageBitmap.height
-    const widthRatio = params.maxDimension / fromWidth
-    const heightRatio = params.maxDimension / fromHeight
+async function createResizeMetadataForInitialImage(
+  image: InitialImage,
+  tileOptions: TileOptions,
+  dimensionLimits: DimensionLimit[],
+): Promise<ResizeMetadata[]> {
+  const imageBitmap = image instanceof ImageBitmap ? image : await createImageBitmap(image)
+  const resizeMetadata: ResizeMetadata[] = []
+
+  for (const dimensionLimit of dimensionLimits) {
+    const from = imageBitmap
+    const fromWidth = imageBitmap.width
+    const fromHeight = imageBitmap.height
+    const widthRatio = dimensionLimit / fromWidth
+    const heightRatio = dimensionLimit / fromHeight
     const scaleFactor = Math.min(widthRatio, heightRatio, 1) // 1 to not scale it up
     const finalToWidth = Math.floor(fromWidth * scaleFactor)
     const finalToHeight = Math.floor(fromHeight * scaleFactor)
-    stages = createResizeStages(
+
+    const stages = createResizeStages(
       fromWidth,
       fromHeight,
       finalToWidth,
       finalToHeight,
-      params.tileOptions.initialSize,
-      params.tileOptions.filterPadding,
+      tileOptions.initialSize,
+      tileOptions.filterPadding,
     )
-  } else {
-    from = params.image.from
-    fromWidth = params.image.fromWidth
-    fromHeight = params.image.fromHeight
-    stages = params.image.stages
+    
+    const tileTransforms = createTileTransforms(
+      from,
+      fromWidth,
+      fromHeight,
+      stages[0].toWidth,
+      stages[0].toHeight,
+      tileOptions,
+    )
+
+    resizeMetadata.push({ stages, tileTransforms })
   }
 
-  toWidth = stages[0].toWidth
-  toHeight = stages[0].toHeight
+  imageBitmap.close()
 
+  return resizeMetadata
+}
+
+function createResizeMetadataForResizedImage(
+  image: ResizedImage,
+  tileOptions: TileOptions,
+): ResizeMetadata[] {
   const tileTransforms = createTileTransforms(
-    from,
-    fromWidth,
-    fromHeight,
-    toWidth,
-    toHeight,
-    params.tileOptions.initialSize,
-    params.tileOptions.filterPadding,
-    params.tileOptions.filter,
-    params.tileOptions.unsharpAmount,
-    params.tileOptions.unsharpRadius,
-    params.tileOptions.unsharpThreshold,
+    image.from,
+    image.fromWidth,
+    image.fromHeight,
+    image.stages[0].toWidth,
+    image.stages[0].toHeight,
+    tileOptions,
   )
 
-  if (from instanceof ImageBitmap) from.close()
+  return [{ stages: image.stages, tileTransforms }]
+}
 
-  return { tileTransforms, stages }
+export async function createResizeMetadata(params: CreateResizeMetadataParams) {
+  if (params.image instanceof Blob || params.image instanceof ImageBitmap) {
+    return createResizeMetadataForInitialImage(params.image, params.tileOptions, params.dimensionLimits)
+  } else {
+    return createResizeMetadataForResizedImage(params.image, params.tileOptions)
+  }
 }

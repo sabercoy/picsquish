@@ -2,7 +2,6 @@ import {
   BYTES_PER_PIXEL,
   ResizeStage,
   TaskType,
-  TaskId,
   TaskData1,
   TaskResult,
   TaskResult1,
@@ -12,20 +11,30 @@ import {
   TaskMessage1,
   TaskMessage2,
   SquishResult,
+  TileOptions,
+  SquishId,
+  WorkspaceIndex,
 } from '../common'
 import { placeTile } from './place-tile'
 import { workerPool } from './worker-pool'
 
-type SquishContext = {
-  maxDimension: TaskData1['maxDimension']
-  tileOptions: TaskData1['tileOptions']
-  to: Uint8ClampedArray<ArrayBuffer> | null
+type Workspace = {
+  to: Uint8ClampedArray<ArrayBuffer>
   toWidth: number
   toHeight: number
   stages: ResizeStage[]
   remainingTileCount: number
+}
+
+type WorkspaceHandler = {
   resolve: (result: SquishResult) => void
   reject: (error: Error) => void
+}
+
+type SquishContext = {
+  tileOptions: TileOptions
+  workspaces: Map<WorkspaceIndex, Workspace>
+  workspaceHandlers: Map<WorkspaceIndex, WorkspaceHandler>
 }
 
 const createId = (() => {
@@ -34,7 +43,7 @@ const createId = (() => {
 })()
 
 class TaskQueue {
-  #squishContexts: Map<TaskId, SquishContext>
+  #squishContexts: Map<SquishId, SquishContext>
   #priority1TaskQueue: PendingTask1[]
   #priority2TaskQueue: PendingTask2[]
 
@@ -45,28 +54,31 @@ class TaskQueue {
   }
 
   #assignPriority1Task(worker: Worker, task: PendingTask1) {
+    const taskId = createId()
+
     const taskMessage: TaskMessage1 = {
-      taskId: task.id,
+      taskId,
       squishId: task.squishId,
       taskType: TaskType.CreateResizeMetadata,
-      image: task.data.image,
-      maxDimension: task.data.maxDimension,
-      tileOptions: task.data.tileOptions,
+      data: task.data,
     }
 
     const transfer = task.data.image instanceof ImageBitmap ? [task.data.image] : []
-    workerPool.assignTask(worker, task, taskMessage, transfer)
+    workerPool.assignTask(worker, taskId, taskMessage, transfer)
   }
 
   #assignPriority2Task(worker: Worker, task: PendingTask2) {
+    const taskId = createId()
+
     const taskMessage: TaskMessage2 = {
-      taskId: task.id,
+      taskId,
       squishId: task.squishId,
+      workspaceIndex: task.workspaceIndex,
       taskType: TaskType.TransformTile,
-      tileTransform: task.data.tileTransform,
+      data: task.data,
     }
 
-    workerPool.assignTask(worker, task, taskMessage, [taskMessage.tileTransform.tile])
+    workerPool.assignTask(worker, taskId, taskMessage, [task.data.tileTransform.tile])
   }
 
   #attemptAssignTask(worker: Worker) {
@@ -87,55 +99,78 @@ class TaskQueue {
   }
 
   #onTask1Complete(squishContext: SquishContext, taskResult: TaskResult1) {
-    const { squishId, output } = taskResult
+    const { squishId, output, error } = taskResult
 
-    const toWidth = output.stages[0].toWidth
-    const toHeight = output.stages[0].toHeight
-
-    squishContext.to = new Uint8ClampedArray(toWidth * toHeight * BYTES_PER_PIXEL)
-    squishContext.toWidth = toWidth
-    squishContext.toHeight = toHeight
-    squishContext.stages = output.stages
-    squishContext.remainingTileCount = output.tileTransforms.length
-
-    for (const tileTransform of output.tileTransforms) {
-      this.#priority2TaskQueue.push({
-        id: createId(),
-        squishId,
-        data: { tileTransform },
+    // if errored on task 1 then consider all workspaces for this squish context rejected
+    if (error) return squishContext.workspaceHandlers.forEach(h => h.reject(error))
+      
+    for (const [workspaceIndex, resizeMetadata] of output.entries()) {
+      const toWidth = resizeMetadata.stages[0].toWidth
+      const toHeight = resizeMetadata.stages[0].toHeight
+      squishContext.workspaces.set(workspaceIndex, {
+        to: new Uint8ClampedArray(toWidth * toHeight * BYTES_PER_PIXEL),
+        toWidth,
+        toHeight,
+        stages: resizeMetadata.stages,
+        remainingTileCount: resizeMetadata.tileTransforms.length,
       })
+
+      for (const tileTransform of resizeMetadata.tileTransforms) {
+        this.#priority2TaskQueue.push({
+          squishId,
+          workspaceIndex,
+          data: { tileTransform },
+        })
+      }
     }
   }
 
+  // if I reject a resize, how to make sure further tasks in the queue dont execute for it
   #onTask2Complete(squishContext: SquishContext, taskResult: TaskResult2) {
-    const { squishId, output } = taskResult
-    if (!squishContext.to) throw new Error('Picsquish error: squishContext.to not found')
+    const { squishId, workspaceIndex, output, error } = taskResult
 
-    placeTile(squishContext.to, squishContext.toWidth, output.tileTransform)
-    squishContext.remainingTileCount--
+    // check if workspace exists: it is possible that it errored and cleared while this task was being processed
+    if (!squishContext.workspaces.has(workspaceIndex)) return undefined
 
-    if (squishContext.remainingTileCount) return undefined
+    const workspace = squishContext.workspaces.get(workspaceIndex)
+    if (!workspace) throw new Error('Picsquish error: workspace not found')
+    const workspaceHandler = squishContext.workspaceHandlers.get(workspaceIndex)
+    if (!workspaceHandler) throw new Error('Picsquish error: workspaceHandler not found')
+    
+    // if error then clear the workspace and all remaining associated tasks
+    if (error) {
+      squishContext.workspaces.delete(workspaceIndex)
+      this.#priority2TaskQueue = this.#priority2TaskQueue.filter(t => !(t.squishId === squishId && t.workspaceIndex === workspaceIndex))
+      return workspaceHandler.reject(error)
+    }
 
-    squishContext.stages.shift()
-    const nextStage = squishContext.stages[0]
+    placeTile(workspace.to, workspace.toWidth, output.tileTransform)
+    --workspace.remainingTileCount
 
-    if (!nextStage) return squishContext.resolve(new SquishResult(
-      squishContext.to,
-      squishContext.toWidth,
-      squishContext.toHeight
-    ))
+    if (workspace.remainingTileCount) return undefined
+
+    workspace.stages.shift()
+    const nextStage = workspace.stages[0]
+
+    if (!nextStage) {
+      squishContext.workspaces.delete(workspaceIndex)
+      return workspaceHandler.resolve(new SquishResult(
+        workspace.to,
+        workspace.toWidth,
+        workspace.toHeight
+      ))
+    }
 
     this.#priority1TaskQueue.push({
-      id: createId(),
       squishId,
       data: {
         image: {
-          from: squishContext.to,
-          fromWidth: squishContext.toWidth,
-          fromHeight: squishContext.toHeight,
-          stages: squishContext.stages,
+          from: workspace.to,
+          fromWidth: workspace.toWidth,
+          fromHeight: workspace.toHeight,
+          stages: workspace.stages,
         },
-        maxDimension: squishContext.maxDimension,
+        dimensionLimits: [], // only needed for initial resize
         tileOptions: squishContext.tileOptions
       },
     })
@@ -144,7 +179,6 @@ class TaskQueue {
   #onTaskComplete(event: MessageEvent<TaskResult>) {
     const squishContext = this.#squishContexts.get(event.data.squishId)
     if (!squishContext) throw new Error('Picsquish error: squishContext not found')
-    if (event.data.error) squishContext.reject(event.data.error)
 
     switch (event.data.taskType) {
       case TaskType.CreateResizeMetadata:
@@ -154,6 +188,9 @@ class TaskQueue {
         this.#onTask2Complete(squishContext, event.data as TaskResult2)
         break
     }
+
+    // if all workspaces are cleared after being resolved or rejected then remove the squishContext
+    if (!squishContext.workspaces.size) this.#squishContexts.delete(event.data.squishId)
 
     workerPool.removeTask(event.data.taskId)
     this.#processQueue()
@@ -166,28 +203,28 @@ class TaskQueue {
       maxWorkerPoolIdleTime,
     )
 
-    return new Promise<SquishResult>((resolve, reject) => {
-      const taskId = createId()
-      this.#squishContexts.set(taskId, {
-        maxDimension: taskData.maxDimension,
-        tileOptions: taskData.tileOptions,
-        to: null,
-        toWidth: 0,
-        toHeight: 0,
-        stages: [],
-        remainingTileCount: Infinity,
-        resolve,
-        reject,
-      })
+    const squishPromises: Promise<SquishResult>[] = []
+    const workspaceHandlers: Map<WorkspaceIndex, WorkspaceHandler> = new Map()
 
-      this.#priority1TaskQueue.push({
-        id: taskId,
-        squishId: taskId,
-        data: taskData,
-      })
+    for (let workspaceIndex = 0; workspaceIndex < taskData.dimensionLimits.length; workspaceIndex++) {
+      squishPromises.push(new Promise<SquishResult>((resolve, reject) => {
+        workspaceHandlers.set(workspaceIndex, { resolve, reject })
+      }))
+    }
 
-      this.#processQueue()
+    const squishId = createId()
+
+    this.#squishContexts.set(squishId, {
+      tileOptions: taskData.tileOptions,
+      workspaces: new Map(),
+      workspaceHandlers,
     })
+
+    this.#priority1TaskQueue.push({ squishId, data: taskData })
+
+    queueMicrotask(() => this.#processQueue())
+
+    return squishPromises
   }
 }
 

@@ -1,7 +1,7 @@
 import {
   TaskMessage,
-  PendingTask,
   TaskResult,
+  TaskId,
 } from '../common'
 
 const workerCode = '<WORKER_CODE>'
@@ -48,12 +48,12 @@ class WorkerPool {
 
   assignTask(
     worker: Worker,
-    task: PendingTask,
+    taskId: TaskId,
     taskMessage: TaskMessage,
     transfer: Transferable[],
   ) {
-    this.#workerToTaskId.set(worker, task.id)
-    this.#taskIdToWorker.set(task.id, worker)
+    this.#workerToTaskId.set(worker, taskId)
+    this.#taskIdToWorker.set(taskId, worker)
     this.#clearTimeout()
     worker.postMessage(taskMessage, transfer)
   }

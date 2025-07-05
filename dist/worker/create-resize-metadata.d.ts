@@ -1,11 +1,12 @@
-import { InitialImage, ResizedImage, ResizeStage, TileOptions } from '../common';
+import { DimensionLimit, InitialImage, ResizedImage, ResizeStage, TileOptions, TileTransform } from '../common';
 type CreateResizeMetadataParams = {
     image: InitialImage | ResizedImage;
-    maxDimension: number;
+    dimensionLimits: DimensionLimit[];
     tileOptions: TileOptions;
 };
-export declare function createResizeMetadata(params: CreateResizeMetadataParams): Promise<{
-    tileTransforms: import("../common").TileTransform[];
+type ResizeMetadata = {
+    tileTransforms: TileTransform[];
     stages: ResizeStage[];
-}>;
+};
+export declare function createResizeMetadata(params: CreateResizeMetadataParams): Promise<ResizeMetadata[]>;
 export {};

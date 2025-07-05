@@ -2,7 +2,7 @@ import { TaskData1, SquishResult } from '../common';
 declare class TaskQueue {
     #private;
     constructor();
-    add(taskData: TaskData1, maxWorkerPoolSize: number, maxWorkerPoolIdleTime: number): Promise<SquishResult>;
+    add(taskData: TaskData1, maxWorkerPoolSize: number, maxWorkerPoolIdleTime: number): Promise<SquishResult>[];
 }
 export declare const taskQueue: TaskQueue;
 export {};

@@ -1,4 +1,4 @@
-import { Filter, TileTransform } from '../common'
+import { TileOptions, TileTransform } from '../common'
 import { extractTile } from './extract-tile'
 
 const PIXEL_EPSILON = 1e-5
@@ -25,13 +25,10 @@ export function createTileTransforms(
   fromHeight: number,
   toWidth: number,
   toHeight: number,
-  initialSize: number,
-  filterPadding: number,
-  filter: Filter,
-  unsharpAmount: number,
-  unsharpRadius: number,
-  unsharpThreshold: number,
+  tileOptions: TileOptions,
 ) {
+  const { initialSize, filterPadding, filter, unsharpAmount, unsharpRadius, unsharpThreshold } = tileOptions
+
   const scaleX = toWidth / fromWidth
   const scaleY = toHeight / fromHeight
 

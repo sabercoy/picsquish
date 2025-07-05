@@ -1,5 +1,7 @@
 export const BYTES_PER_PIXEL = 4 // channels: RGBA
 
+export type DimensionLimit = number
+
 export class SquishResult {
   raw: Uint8ClampedArray<ArrayBuffer>
   width: number
@@ -82,6 +84,11 @@ export type TileTransform = {
   unsharpThreshold: number
 }
 
+export type ResizeMetadata = {
+  tileTransforms: TileTransform[]
+  stages: ResizeStage[]
+}
+
 export type ResizedImage = {
   from: Uint8ClampedArray
   fromWidth: number
@@ -95,10 +102,12 @@ export enum TaskType {
 }
 
 export type TaskId = number
+export type SquishId = number
+export type WorkspaceIndex = number
 
 export type TaskData1 = {
   image: InitialImage | ResizedImage
-  maxDimension: number
+  dimensionLimits: DimensionLimit[]
   tileOptions: TileOptions
 }
 
@@ -108,16 +117,15 @@ type TaskData2 = {
 
 export type TaskMessage = {
   taskId: TaskId
-  squishId: TaskId
+  squishId: SquishId
   taskType: TaskType
 }
 
-export type TaskMessage1 = TaskMessage & TaskData1
-export type TaskMessage2 = TaskMessage & TaskData2
+export type TaskMessage1 = TaskMessage & { data: TaskData1 }
+export type TaskMessage2 = TaskMessage & { workspaceIndex: WorkspaceIndex } & { data: TaskData2 }
 
 export type PendingTask = {
-  id: TaskId
-  squishId: TaskId
+  squishId: SquishId
 }
 
 export type PendingTask1 = PendingTask & {
@@ -125,24 +133,23 @@ export type PendingTask1 = PendingTask & {
 }
 
 export type PendingTask2 = PendingTask & {
+  workspaceIndex: WorkspaceIndex
   data: TaskData2
 }
 
 export type TaskResult = {
   taskId: TaskId
-  squishId: TaskId
+  squishId: SquishId
   taskType: TaskType
   error?: Error
 }
 
 export type TaskResult1 = TaskResult & {
-  output: {
-    tileTransforms: TileTransform[]
-    stages: ResizeStage[]
-  }
+  output: ResizeMetadata[]
 }
 
 export type TaskResult2 = TaskResult & {
+  workspaceIndex: WorkspaceIndex
   output: {
     tileTransform: TileTransform
   }

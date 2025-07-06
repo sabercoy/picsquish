@@ -1,3 +1,12 @@
+type BlobOptions = ({
+    type: 'image/png';
+} | {
+    type: 'image/jpeg';
+    quality?: number;
+} | {
+    type: 'image/webp';
+    quality?: number;
+});
 export declare class SquishResult {
     raw: Uint8ClampedArray<ArrayBuffer>;
     width: number;
@@ -6,7 +15,7 @@ export declare class SquishResult {
     toImageData(): ImageData;
     toImageBitmap(): Promise<ImageBitmap>;
     toCanvas(): HTMLCanvasElement;
-    toBlob(type?: string): Promise<Blob>;
+    toBlob(options?: BlobOptions): Promise<Blob>;
 }
 export declare const BYTES_PER_PIXEL = 4;
 export type Filter = 'box' | 'hamming' | 'lanczos2' | 'lanczos3' | 'mks2013';

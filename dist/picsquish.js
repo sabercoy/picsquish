@@ -127,13 +127,13 @@ class SquishResult {
     context.putImageData(this.toImageData(), 0, 0);
     return canvas;
   }
-  toBlob(type = "image/png") {
+  toBlob(options) {
     const canvas = new OffscreenCanvas(this.width, this.height);
     const context = canvas.getContext("2d");
     if (!context)
       throw new Error("Picsquish error: canvas 2D context not supported");
     context.putImageData(this.toImageData(), 0, 0);
-    return canvas.convertToBlob({ type });
+    return canvas.convertToBlob(options);
   }
 }
 var BYTES_PER_PIXEL = 4;

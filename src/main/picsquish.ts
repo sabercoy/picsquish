@@ -1,7 +1,7 @@
 import { SquishResult, TileOptions } from '../common'
 import { taskQueue } from './task-queue'
 
-type Options = {
+export type Options = {
   useMainThread?: boolean
   maxWorkerPoolSize?: number
   maxWorkerIdleTime?: number

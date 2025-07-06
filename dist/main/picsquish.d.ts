@@ -1,5 +1,5 @@
 import { SquishResult, TileOptions } from '../common';
-type Options = {
+export type Options = {
     useMainThread?: boolean;
     maxWorkerPoolSize?: number;
     maxWorkerIdleTime?: number;
@@ -11,4 +11,3 @@ type Options = {
 };
 export declare function squish(image: Blob, dimensionLimits: number, options?: Options): Promise<SquishResult>;
 export declare function squish(image: Blob, dimensionLimits: number[], options?: Options): Promise<SquishResult>[];
-export {};

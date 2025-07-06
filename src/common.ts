@@ -1,3 +1,9 @@
+type BlobOptions = (
+  | { type: 'image/png' }
+  | { type: 'image/jpeg', quality?: number }
+  | { type: 'image/webp', quality?: number }
+)
+
 export class SquishResult {
   raw: Uint8ClampedArray<ArrayBuffer>
   width: number
@@ -27,12 +33,12 @@ export class SquishResult {
     return canvas
   }
 
-  toBlob(type: string = 'image/png') {
+  toBlob(options?: BlobOptions) {
     const canvas = new OffscreenCanvas(this.width, this.height)
     const context = canvas.getContext('2d')
     if (!context) throw new Error('Picsquish error: canvas 2D context not supported')
     context.putImageData(this.toImageData(), 0, 0)
-    return canvas.convertToBlob({ type })
+    return canvas.convertToBlob(options)
   }
 }
 

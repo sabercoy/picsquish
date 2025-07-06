@@ -20,7 +20,7 @@ This project is aimed for resizing images within the browser so that no external
 Usage Examples
 ---------------------------------
 ```ts
-import { squish } from 'picsquish'
+import { squish, type Options as SquishOptions } from 'picsquish'
 
 // you can get a single resized image with one input image
 const single = await squish(inputImage, 400)
@@ -29,13 +29,18 @@ const resizedBlob = await single.toBlob()
 // you can get multiple resized images with one input image
 const multi = squish(inputImage, [400, 600, 800])
 multi.forEach(p => p.then(r => r.toBlob()))
+
+// you can override the default configuration by specifying your own options
+const options: SquishOptions = { maxWorkerIdleTime: 1000, maxWorkerPoolSize: 6 }
+const custom = await squish(inputImage, 400, options)
 ```
 
 API
 ---------------------------------
 > The API is open for suggestions for 1.0.0 release
 ```ts
-const squishResult = await squish(image, dimensionLimits, options)
+// result can be a single Promise<SquishResult> or an array of them (depending on dimensionLimits)
+const result = squish(image, dimensionLimits, options)
 ```
 - __image__ - an image `Blob`
 - __dimensionLimits__ - can be a single input or an array specifying the dimension limit(s) for each resized image

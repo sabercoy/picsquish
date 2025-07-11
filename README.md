@@ -42,7 +42,7 @@ API
 // result can be a single Promise<SquishResult> or an array of them (depending on dimensionLimits)
 const result = squish(image, dimensionLimits, options)
 ```
-- __image__ - an image `Blob`
+- __image__ - can be a `Blob` or `ImageBitmap`
 - __dimensionLimits__ - can be a single input or an array specifying the dimension limit(s) for each resized image
 - __options__ - options are not required and defaults are provided for those not specified
   - __useMainThread__ - if (for some reason) you want to resize on the main thread and not use web workers

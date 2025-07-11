@@ -28,7 +28,7 @@ export class SquishResult {
     canvas.width = this.width
     canvas.height = this.height
     const context = canvas.getContext('2d')
-    if (!context) throw new Error('Picsquish error: canvas 2D context not supported')
+    if (!context) throw new Error('Picsquish error: no canvas 2D context')
     context.putImageData(this.toImageData(), 0, 0)
     return canvas
   }
@@ -36,7 +36,7 @@ export class SquishResult {
   toBlob(options?: BlobOptions) {
     const canvas = new OffscreenCanvas(this.width, this.height)
     const context = canvas.getContext('2d')
-    if (!context) throw new Error('Picsquish error: canvas 2D context not supported')
+    if (!context) throw new Error('Picsquish error: no canvas 2D context')
     context.putImageData(this.toImageData(), 0, 0)
     return canvas.convertToBlob(options)
   }
@@ -107,8 +107,10 @@ export type ResizedImage = {
   stages: ResizeStage[]
 }
 
+export type InitialImage = Blob | ImageBitmap
+
 export type TaskData1 = {
-  image: Blob | ResizedImage
+  image: InitialImage | ResizedImage
   dimensionLimits: number[]
   tileOptions: TileOptions
 }

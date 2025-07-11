@@ -123,7 +123,7 @@ class SquishResult {
     canvas.height = this.height;
     const context = canvas.getContext("2d");
     if (!context)
-      throw new Error("Picsquish error: canvas 2D context not supported");
+      throw new Error("Picsquish error: no canvas 2D context");
     context.putImageData(this.toImageData(), 0, 0);
     return canvas;
   }
@@ -131,7 +131,7 @@ class SquishResult {
     const canvas = new OffscreenCanvas(this.width, this.height);
     const context = canvas.getContext("2d");
     if (!context)
-      throw new Error("Picsquish error: canvas 2D context not supported");
+      throw new Error("Picsquish error: no canvas 2D context");
     context.putImageData(this.toImageData(), 0, 0);
     return canvas.convertToBlob(options);
   }
@@ -383,7 +383,7 @@ function createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, ti
 
 // src/worker/create-resize-metadata.ts
 async function createResizeMetadataForInitialImage(image, tileOptions, dimensionLimits) {
-  const imageBitmap = await createImageBitmap(image);
+  const imageBitmap = image instanceof Blob ? await createImageBitmap(image) : image;
   const resizeMetadata = [];
   for (const dimensionLimit of dimensionLimits) {
     const from = imageBitmap;
@@ -406,7 +406,7 @@ function createResizeMetadataForResizedImage(image, tileOptions) {
   return [{ stages: image.stages, tileTransforms }];
 }
 async function createResizeMetadata(params) {
-  if (params.image instanceof Blob) {
+  if (params.image instanceof Blob || params.image instanceof ImageBitmap) {
     return createResizeMetadataForInitialImage(params.image, params.tileOptions, params.dimensionLimits);
   } else {
     return createResizeMetadataForResizedImage(params.image, params.tileOptions);
@@ -1013,7 +1013,7 @@ function createTileTransforms(from, fromWidth, fromHeight, toWidth, toHeight, ti
 
 // src/worker/create-resize-metadata.ts
 async function createResizeMetadataForInitialImage(image, tileOptions, dimensionLimits) {
-  const imageBitmap = await createImageBitmap(image);
+  const imageBitmap = image instanceof Blob ? await createImageBitmap(image) : image;
   const resizeMetadata = [];
   for (const dimensionLimit of dimensionLimits) {
     const from = imageBitmap;
@@ -1036,7 +1036,7 @@ function createResizeMetadataForResizedImage(image, tileOptions) {
   return [{ stages: image.stages, tileTransforms }];
 }
 async function createResizeMetadata(params) {
-  if (params.image instanceof Blob) {
+  if (params.image instanceof Blob || params.image instanceof ImageBitmap) {
     return createResizeMetadataForInitialImage(params.image, params.tileOptions, params.dimensionLimits);
   } else {
     return createResizeMetadataForResizedImage(params.image, params.tileOptions);
@@ -1594,6 +1594,16 @@ class TaskQueue {
 }
 var taskQueue = new TaskQueue;
 
+// src/main/clone-image-bitmap.ts
+function cloneImageBitmap(image) {
+  const canvas = new OffscreenCanvas(image.width, image.height);
+  const context = canvas.getContext("2d");
+  if (!context)
+    throw new Error("Picsquish error: no canvas 2D context");
+  context.drawImage(image, 0, 0);
+  return canvas.transferToImageBitmap();
+}
+
 // src/main/picsquish.ts
 function squish(image, dimensionLimits, options = {}) {
   const tileSize = options.tileSize || 1024;
@@ -1615,9 +1625,10 @@ function squish(image, dimensionLimits, options = {}) {
     unsharpRadius,
     unsharpThreshold
   };
+  const initialImage = image instanceof Blob ? image : cloneImageBitmap(image);
   if (dimensionLimits instanceof Array)
-    return taskQueue.add({ image, dimensionLimits, tileOptions }, maxWorkerPoolSize, maxWorkerPoolIdleTime, useMainThread);
-  return taskQueue.add({ image, dimensionLimits: [dimensionLimits], tileOptions }, maxWorkerPoolSize, maxWorkerPoolIdleTime, useMainThread)[0];
+    return taskQueue.add({ image: initialImage, dimensionLimits, tileOptions }, maxWorkerPoolSize, maxWorkerPoolIdleTime, useMainThread);
+  return taskQueue.add({ image: initialImage, dimensionLimits: [dimensionLimits], tileOptions }, maxWorkerPoolSize, maxWorkerPoolIdleTime, useMainThread)[0];
 }
 export {
   squish

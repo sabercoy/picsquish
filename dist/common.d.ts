@@ -73,8 +73,9 @@ export type ResizedImage = {
     fromHeight: number;
     stages: ResizeStage[];
 };
+export type InitialImage = Blob | ImageBitmap;
 export type TaskData1 = {
-    image: Blob | ResizedImage;
+    image: InitialImage | ResizedImage;
     dimensionLimits: number[];
     tileOptions: TileOptions;
 };

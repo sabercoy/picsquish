@@ -1,5 +1,6 @@
-import { SquishResult, TileOptions } from '../common'
+import { InitialImage, SquishResult, TileOptions } from '../common'
 import { taskQueue } from './task-queue'
+import { cloneImageBitmap } from './clone-image-bitmap'
 
 export type Options = {
   useMainThread?: boolean
@@ -12,10 +13,9 @@ export type Options = {
   unsharpThreshold?: TileOptions['unsharpThreshold']
 }
 
-export function squish(image: Blob, dimensionLimits: number, options?: Options): Promise<SquishResult>
-export function squish(image: Blob, dimensionLimits: number[], options?: Options): Promise<SquishResult>[]
-
-export function squish(image: Blob, dimensionLimits: number | number[], options: Options = {}) {
+export function squish(image: InitialImage, dimensionLimits: number, options?: Options): Promise<SquishResult>
+export function squish(image: InitialImage, dimensionLimits: number[], options?: Options): Promise<SquishResult>[]
+export function squish(image: InitialImage, dimensionLimits: number | number[], options: Options = {}) {
   const tileSize = options.tileSize || 1024
   const filter = options.filter || 'mks2013'
   const unsharpAmount = options.unsharpAmount || 0
@@ -38,15 +38,17 @@ export function squish(image: Blob, dimensionLimits: number | number[], options:
     unsharpThreshold,
   }
 
+  const initialImage = image instanceof Blob ? image : cloneImageBitmap(image)
+
   if (dimensionLimits instanceof Array) return taskQueue.add(
-    { image, dimensionLimits, tileOptions },
+    { image: initialImage, dimensionLimits, tileOptions },
     maxWorkerPoolSize,
     maxWorkerPoolIdleTime,
     useMainThread,
   )
 
   return taskQueue.add(
-    { image, dimensionLimits: [dimensionLimits], tileOptions },
+    { image: initialImage, dimensionLimits: [dimensionLimits], tileOptions },
     maxWorkerPoolSize,
     maxWorkerPoolIdleTime,
     useMainThread,

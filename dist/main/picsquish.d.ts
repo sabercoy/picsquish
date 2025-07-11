@@ -1,4 +1,4 @@
-import { SquishResult, TileOptions } from '../common';
+import { InitialImage, SquishResult, TileOptions } from '../common';
 export type Options = {
     useMainThread?: boolean;
     maxWorkerPoolSize?: number;
@@ -9,5 +9,5 @@ export type Options = {
     unsharpRadius?: TileOptions['unsharpRadius'];
     unsharpThreshold?: TileOptions['unsharpThreshold'];
 };
-export declare function squish(image: Blob, dimensionLimits: number, options?: Options): Promise<SquishResult>;
-export declare function squish(image: Blob, dimensionLimits: number[], options?: Options): Promise<SquishResult>[];
+export declare function squish(image: InitialImage, dimensionLimits: number, options?: Options): Promise<SquishResult>;
+export declare function squish(image: InitialImage, dimensionLimits: number[], options?: Options): Promise<SquishResult>[];

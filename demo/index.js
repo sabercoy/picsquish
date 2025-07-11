@@ -148,6 +148,8 @@ imageUploadPicsquish.addEventListener('change', async (event) => {
     //   }).catch(error => console.log(error))
     // })
 
+    const original = file
+
     const single = (file) => squish(file, inputs.maxDimension, {
       tileSize: inputs.tileSize,
       useMainThread: inputs.useMainThread,
@@ -159,7 +161,7 @@ imageUploadPicsquish.addEventListener('change', async (event) => {
       unsharpThreshold: inputs.unsharpThreshold,
     })
 
-    single(file).then(result => result.toImageBitmap()).then(imageBitmap => {
+    single(original).then(result => result.toImageBitmap()).then(imageBitmap => {
       const canvas = document.createElement('canvas')
       document.body.appendChild(canvas)
       const context = canvas.getContext('2d')
@@ -173,3 +175,40 @@ imageUploadPicsquish.addEventListener('change', async (event) => {
     }).catch(error => console.log(error))
   })
 })
+
+function createImageBitmapInWorker(blob) {
+  const workerCode = `
+    self.onmessage = async (event) => {
+      try {
+        const bitmap = await createImageBitmap(event.data)
+        self.postMessage(bitmap, [bitmap])
+      } catch (error) {
+        self.postMessage({ error: error.message })
+      }
+    }
+  `
+
+  const blobURL = URL.createObjectURL(new Blob([workerCode], { type: 'application/javascript' }))
+  const worker = new Worker(blobURL)
+
+  return new Promise((resolve, reject) => {
+    worker.onmessage = (event) => {
+      const result = event.data
+      if (result && result.error) {
+        reject(new Error(result.error))
+      } else {
+        resolve(result)
+      }
+      worker.terminate()
+      URL.revokeObjectURL(blobURL)
+    }
+
+    worker.onerror = (error) => {
+      reject(error)
+      worker.terminate()
+      URL.revokeObjectURL(blobURL)
+    }
+
+    worker.postMessage(blob)
+  })
+}
